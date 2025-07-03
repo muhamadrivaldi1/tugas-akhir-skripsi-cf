@@ -74,28 +74,31 @@ if ($no_regdiagnosa_url) {
 
 <!-- ============================= HTML ============================= -->
 <div class="container">
-    <div class="card shadow p-5 mb-5">
-        <div class="card-header">
-            <h5 class="m-0 font-weight-bold text-primary">Diagnosa</h5>
+    <div class="card shadow-lg p-5 mb-5 bg-white rounded border-primary">
+        <div class="card-header bg-primary text-white">
+            <h4 class="m-0 font-weight-bold">Diagnosa Penyakit Pencernaan</h4>
+            <small class="text-light">Silakan pilih kondisi Anda pada setiap gejala berikut:</small>
         </div>
         <div class="card-body">
             <form action="diagnosa.php?aksi=diagnosa" method="post">
-                <table class="table table-bordered mb-4">
-                    <thead>
+                <table class="table table-hover table-bordered mb-4">
+                    <thead class="thead-dark">
                         <tr>
                             <th>No</th>
                             <th>Gejala</th>
-                            <th>Pilih</th>
+                            <th>Pilih Kondisi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php $no = 1;
                         while ($g = $gejalaRes->fetch_assoc()): ?>
                             <tr>
-                                <td class="text-center"><?= $no++ ?></td>
-                                <td>Apakah Anda mengalami gejala <b><?= htmlspecialchars($g['nama_gejala']) ?></b>?</td>
+                                <td class="text-center align-middle"><?= $no++ ?></td>
+                                <td class="align-middle">
+                                    <span class="badge badge-info">G<?= $g['id_gejala'] ?></span>
+                                    Apakah Anda mengalami gejala <b><?= htmlspecialchars($g['nama_gejala']) ?></b>?
+                                </td>
                                 <td>
-                                    <!-- opsi default value 0  → jika user melewati, CF‑User = 0 -->
                                     <select class="form-control" name="kondisi[]">
                                         <option value="0" selected>Pilih Kondisi</option>
                                         <option value="0.8">Yakin (0.8)</option>
@@ -111,60 +114,235 @@ if ($no_regdiagnosa_url) {
                     </tbody>
                 </table>
                 <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
-                <a href="index.php" class="btn btn-secondary mb-2">Batal</a>
-                <button type="submit" class="btn btn-primary mb-2">Proses Diagnosa</button>
+                <div class="d-flex justify-content-between">
+                    <a href="index.php" class="btn btn-outline-secondary mb-2">Batal</a>
+                    <button type="submit" class="btn btn-primary mb-2">
+                        <i class="fas fa-stethoscope"></i> Proses Diagnosa
+                    </button>
+                </div>
             </form>
         </div>
 
         <!-- ==================== HASIL ANALISA ==================== -->
         <?php if ($resultDiag && $resultDiag->num_rows): ?>
-            <br><br>
-            <center>
-                <h2 class="font-weight-bold text-primary">
-                    HASIL DIAGNOSA PENYAKIT PENCERNAAN DENGAN METODE CERTAINTY FACTOR
-                </h2>
-            </center>
-            <hr>
-            <h5 class="font-weight-bold">Rules</h5>
-
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Penyakit</th>
-                            <th>Gejala</th>
-                            <th>CF Pakar (MB-MD)</th>
-                            <th>CF User</th>
-                            <th>Nilai CF&nbsp;(CF<sub>pakar</sub> × CF<sub>user</sub>)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php $no = 1;
-                        while ($row = $resultDiag->fetch_assoc()):
-                            /* -------------------------------------------------
-                       CF_pakar  = MB – MD  (di DB =  kolom nilai_gejala)
-                       CF_user   = nilai_pasien
-                       CF_akhir  = (MB‑MD) × CF_user
-                    --------------------------------------------------*/
-                            $cf_pakar  = (float)$row['nilai_gejala'];     // sudah MB‑MD
-                            $cf_user   = (float)$row['nilai_pasien'];
-                            $cf_akhir  = $cf_pakar * $cf_user;            // perkalian
-                        ?>
+            <div class="mt-5">
+                <center>
+                    <h3 class="font-weight-bold text-primary mb-3">
+                        Hasil Diagnosa Penyakit Pencernaan
+                    </h3>
+                    <p class="lead">Berikut adalah hasil diagnosa berdasarkan gejala yang Anda pilih:</p>
+                </center>
+                <hr>
+                <h5 class="font-weight-bold mb-3">Detail Perhitungan Setiap Gejala</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="thead-light">
                             <tr>
-                                <td class="text-center"><?= $no++ ?></td>
-                                <td class="text-center"><?= htmlspecialchars($row['nama_penyakit']) ?></td>
-                                <td class="text-center"><?= htmlspecialchars($row['nama_gejala']) ?></td>
-                                <td class="text-center"><?= $cf_pakar ?></td>
-                                <td class="text-center"><?= $cf_user ?></td>
-                                <td class="text-center"><?= number_format($cf_akhir, 2) ?></td>
+                                <th>No</th>
+                                <th>Jenis Penyakit</th>
+                                <th>Gejala</th>
+                                <th>CF Pakar</th>
+                                <th>CF User</th>
+                                <th>Nilai CF (CF<sub>pakar</sub> × CF<sub>user</sub>)</th>
+                                <th>Persentase (%)</th>
+                                <th>Rumus</th>
                             </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $no = 1;
+                            $data_cf = [];
+                            $penyakit_persen = [];
+                            while ($row = $resultDiag->fetch_assoc()):
+                                $cf_pakar  = (float)$row['nilai_gejala'];
+                                $cf_user   = (float)$row['nilai_pasien'];
+                                $cf_akhir  = $cf_pakar * $cf_user;
+                                $persen    = $cf_akhir * 100;
+                                $nama_penyakit = $row['nama_penyakit'] ?: '-';
+                                // Simpan data untuk perhitungan detail
+                                $data_cf[] = [
+                                    'nama_penyakit' => $nama_penyakit,
+                                    'nama_gejala' => $row['nama_gejala'],
+                                    'cf_pakar' => $cf_pakar,
+                                    'cf_user' => $cf_user,
+                                    'cf_akhir' => $cf_akhir
+                                ];
+                                // Akumulasi persentase per penyakit
+                                if (!isset($penyakit_persen[$nama_penyakit])) $penyakit_persen[$nama_penyakit] = 0;
+                                $penyakit_persen[$nama_penyakit] += $cf_akhir;
+                            ?>
+                                <tr>
+                                    <td class="text-center"><?= $no++ ?></td>
+                                    <td><?= htmlspecialchars($nama_penyakit) ?></td>
+                                    <td><?= htmlspecialchars($row['nama_gejala']) ?></td>
+                                    <td class="text-center"><?= $cf_pakar ?></td>
+                                    <td class="text-center"><?= $cf_user ?></td>
+                                    <td class="text-center"><?= number_format($cf_akhir, 2) ?></td>
+                                    <td class="text-center text-success font-weight-bold"><?= number_format($persen, 2) ?>%</td>
+                                    <td>
+                                        <?= "CF_pakar × CF_user = {$cf_pakar} × {$cf_user} = " . number_format($cf_akhir, 2) ?>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($data_cf)): ?>
+            <div class="border p-4 mt-4 bg-light rounded">
+                <h5 class="font-weight-bold text-primary mb-3">
+                    Rekapitulasi Persentase Penyakit Berdasarkan Gejala
+                </h5>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>No</th>
+                                <th>Jenis Penyakit</th>
+                                <th>Total Nilai CF</th>
+                                <th>Persentase (%)</th>
+                                <th>Rumus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $no = 1;
+                            foreach ($penyakit_persen as $penyakit => $total_cf):
+                                $persen = $total_cf * 100;
+                            ?>
+                                <tr>
+                                    <td class="text-center"><?= $no++ ?></td>
+                                    <td><?= htmlspecialchars($penyakit) ?></td>
+                                    <td class="text-center"><?= number_format($total_cf, 2) ?></td>
+                                    <td class="text-center text-primary font-weight-bold"><?= number_format($persen, 2) ?>%</td>
+                                    <td>
+                                        <?= "Total CF × 100 = " . number_format($total_cf, 2) . " × 100 = " . number_format($persen, 2) . "%" ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <hr>
+                <h5 class="font-weight-bold text-success mt-4">
+                    Detail Perhitungan CF Combine
+                </h5>
+                <hr>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>No</th>
+                                <th>Jenis Penyakit</th>
+                                <th>Gejala</th>
+                                <th>CF Pakar</th>
+                                <th>CF User</th>
+                                <th>CF Combine</th>
+                                <th>Rumus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Kelompokkan data_cf berdasarkan penyakit
+                            $cf_by_penyakit = [];
+                            foreach ($data_cf as $cf) {
+                                $penyakit = $cf['nama_penyakit'];
+                                if (!isset($cf_by_penyakit[$penyakit])) $cf_by_penyakit[$penyakit] = [];
+                                $cf_by_penyakit[$penyakit][] = $cf;
+                            }
+                            $no = 1;
+                            foreach ($cf_by_penyakit as $penyakit => $list_cf) {
+                                $cf_combine = 0;
+                                foreach ($list_cf as $i => $cf) {
+                                    $cf_akhir = $cf['cf_akhir'];
+                                    if ($i == 0) {
+                                        $cf_combine = $cf_akhir;
+                                        $rumus = "CFcombine = {$cf_akhir}";
+                                    } else {
+                                        $prev = $cf_combine;
+                                        $cf_combine = $cf_combine + $cf_akhir * (1 - $cf_combine);
+                                        $rumus = "CFcombine = " . number_format($prev, 6) . " + " . number_format($cf_akhir, 2) . " × (1 - " . number_format($prev, 6) . ") = " . number_format($cf_combine, 6);
+                                    }
+                            ?>
+                                    <tr>
+                                        <td class="text-center"><?= $no++ ?></td>
+                                        <td><?= htmlspecialchars($penyakit) ?></td>
+                                        <td><?= htmlspecialchars($cf['nama_gejala']) ?></td>
+                                        <td class="text-center"><?= $cf['cf_pakar'] ?></td>
+                                        <td class="text-center"><?= $cf['cf_user'] ?></td>
+                                        <td class="text-center text-success"><?= number_format($cf_combine, 4) ?></td>
+                                        <td><?= $rumus ?></td>
+                                    </tr>
+                                <?php
+                                }
+                                // Tampilkan hasil akhir combine per penyakit
+                                ?>
+                                <tr class="table-info">
+                                    <td colspan="5" class="text-right font-weight-bold">Persentase combine pada penyakit (<?= htmlspecialchars($penyakit) ?>)</td>
+                                    <td class="text-primary font-weight-bold"><?= number_format($cf_combine * 100, 2) ?>%</td>
+                                    <td class="font-italic">CFcombine × 100 = <?= number_format($cf_combine, 4) ?> × 100 = <?= number_format($cf_combine * 100, 2) ?>%</td>
+                                </tr>
+                            <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                    <div class="alert alert-info mt-3">
+                        <strong>Hasil Akhir CF Combine:
+                            <span class="text-primary">
+                                <?php
+                                // Tampilkan hasil combine terbesar
+                                $max_cf = 0;
+                                $max_penyakit = '';
+                                foreach ($cf_by_penyakit as $penyakit => $list_cf) {
+                                    $cf_combine = 0;
+                                    foreach ($list_cf as $i => $cf) {
+                                        $cf_akhir = $cf['cf_akhir'];
+                                        if ($i == 0) {
+                                            $cf_combine = $cf_akhir;
+                                        } else {
+                                            $cf_combine = $cf_combine + $cf_akhir * (1 - $cf_combine);
+                                        }
+                                    }
+                                    if ($cf_combine > $max_cf) {
+                                        $max_cf = $cf_combine;
+                                        $max_penyakit = $penyakit;
+                                    }
+                                }
+                                echo htmlspecialchars($max_penyakit) . " (" . number_format($max_cf * 100, 2) . "%)";
+                                ?>
+                            </span>
+                        </strong>
+                        <br>
+                        <small>Semakin tinggi persentase, semakin besar kemungkinan Anda mengalami penyakit tersebut.</small>
+                    </div>
+                </div>
+                <div class="border p-3">
+                    <h5 class="font-weight-bold text-primary">Solusi</h5>
+                    <?php
+                    // Ambil solusi penyakit dengan CF combine tertinggi
+                    if (!empty($max_penyakit)) {
+                        $sqlSolusi = "SELECT solusi FROM tbl_penyakit WHERE nama_penyakit = ?";
+                        $stmtSolusi = $conn->prepare($sqlSolusi);
+                        $stmtSolusi->bind_param('s', $max_penyakit);
+                        $stmtSolusi->execute();
+                        $stmtSolusi->bind_result($solusi);
+                        if ($stmtSolusi->fetch() && !empty($solusi)) {
+                            echo '<div class="alert alert-success">' . nl2br(htmlspecialchars($solusi)) . '</div>';
+                        } else {
+                            echo '<div class="alert alert-warning">Solusi untuk penyakit ini belum tersedia.</div>';
+                        }
+                        $stmtSolusi->close();
+                    } else {
+                        echo '<div class="alert alert-info">Belum ada hasil diagnosa untuk menampilkan solusi.</div>';
+                    }
+                    ?>
+                </div>
             </div>
         <?php endif; ?>
     </div>
 </div>
-
 <?php include 'footer.php'; ?>
