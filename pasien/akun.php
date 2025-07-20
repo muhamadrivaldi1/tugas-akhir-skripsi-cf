@@ -48,15 +48,24 @@ $aa = mysqli_fetch_array(mysqli_query($conn, "SELECT * FROM tbl_pasien WHERE id_
                             <input type="text" name="nama_lengkap" class="form-control rounded-pill"
                                 value="<?= htmlspecialchars($a['nama_lengkap']) ?>" required>
                         </div>
-
                         <div class="mb-3">
                             <label class="form-label">Jenis Kelamin</label>
-                            <select name="jenis_kelamin" class="form-select rounded-pill" required>
-                                <option disabled <?= empty($aa['jenis_kelamin']) ? 'selected' : '' ?>>Pilih Jenis Kelamin</option>
-                                <option value="Laki-Laki" <?= $aa['jenis_kelamin'] == 'Laki-Laki' ? 'selected' : '' ?>>Laki-Laki</option>
-                                <option value="Perempuan" <?= $aa['jenis_kelamin'] == 'Perempuan' ? 'selected' : '' ?>>Perempuan</option>
-                            </select>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="jenis_kelamin" id="laki" value="Laki-Laki"
+                                    <?= isset($aa['jenis_kelamin']) && $aa['jenis_kelamin'] == 'Laki-Laki' ? 'checked' : '' ?> required>
+                                <label class="form-check-label" for="laki">
+                                    Laki-Laki
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="jenis_kelamin" id="perempuan" value="Perempuan"
+                                    <?= isset($aa['jenis_kelamin']) && $aa['jenis_kelamin'] == 'Perempuan' ? 'checked' : '' ?> required>
+                                <label class="form-check-label" for="perempuan">
+                                    Perempuan
+                                </label>
+                            </div>
                         </div>
+
 
                         <div class="mb-3">
                             <label class="form-label">Umur</label>
