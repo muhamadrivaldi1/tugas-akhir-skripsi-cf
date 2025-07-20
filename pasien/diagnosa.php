@@ -340,6 +340,13 @@ if ($no_regdiagnosa_url) {
                         echo '<div class="alert alert-info">Belum ada hasil diagnosa untuk menampilkan solusi.</div>';
                     }
                     ?>
+                   <form action="../admin/history.php" method="post" class="mt-3">
+                        <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
+                        <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
+                        <input type="hidden" name="penyakit" value="<?= htmlspecialchars($max_penyakit) ?>">
+                        <input type="hidden" name="persentase" value="<?= number_format($max_cf * 100, 2) ?>">
+                    </form>
+
                 </div>
             </div>
         <?php endif; ?>

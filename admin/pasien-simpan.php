@@ -1,79 +1,82 @@
 <?php
 include '../assets/conn/config.php';
-if (isset($_GET['aksi'])) {
-    if ($_GET['aksi'] == 'simpan') {
-        $nama_lengkap = $_POST['nama_lengkap'];
-        $jenis_kelamin = $_POST['jenis_kelamin'];
-        $umur = $_POST['umur'];
 
-        // Ambil id_admin dari session
-        $username = $_SESSION['username'];
-        $data = mysqli_query($conn, "SELECT id_admin FROM tbl_admin WHERE username='$username'");
-        if ($data) {
-            $admin = mysqli_fetch_array($data);
-            $id_admin = $admin['id_admin'];
+if (isset($_GET['aksi']) && $_GET['aksi'] == 'simpan') {
+    $nama_lengkap  = $_POST['nama_lengkap'];
+    $jenis_kelamin = $_POST['jenis_kelamin'];
+    $umur          = $_POST['umur'];
+    $username      = $_POST['username'];
+    $password      = $_POST['password'];
+
+    $query_admin = "INSERT INTO tbl_admin (nama_lengkap, username, password, level) 
+                    VALUES ('$nama_lengkap', '$username', '$password', 'Pasien')";
+
+    if (mysqli_query($conn, $query_admin)) {
+        $id_admin_baru = mysqli_insert_id($conn);
+
+        $query_pasien = "INSERT INTO tbl_pasien (nama_lengkap, jenis_kelamin, umur, id_admin) 
+                        VALUES ('$nama_lengkap', '$jenis_kelamin', '$umur', '$id_admin_baru')";
+
+        if (mysqli_query($conn, $query_pasien)) {
+            header("location:pasien.php");
+            exit;
         } else {
-            die("Query error: " . mysqli_error($conn));
+            echo "Error simpan pasien: " . mysqli_error($conn);
         }
-
-        // Masukkan data ke tbl_admin (jika diperlukan)
-        $query_admin = "INSERT INTO tbl_admin (username, nama_lengkap) VALUES ('$username', '$nama_lengkap')";
-        if (!mysqli_query($conn, $query_admin)) {
-            die("Query error: " . mysqli_error($conn));
-        }
-
-        // Masukkan data ke tbl_pasien
-        $query_pasien = "INSERT INTO tbl_pasien (nama_lengkap, jenis_kelamin, id_admin, umur) VALUES ('$nama_lengkap', '$jenis_kelamin', '$id_admin', '$umur')";
-        if (!mysqli_query($conn, $query_pasien)) {
-            die("Query error: " . mysqli_error($conn));
-        }
-
-        header("location:pasien.php");
+    } else {
+        echo "Error simpan admin: " . mysqli_error($conn);
     }
 }
 
 include 'header.php';
 ?>
 
-<div class="container">
-    <div class="card shadow p-5 mb-5">
-        <div class="card-header">
-            <h5 class="m-0 font-weight-bold text-primary">Tambah Data</h5>
-        </div>
-
-        <div class="card-body">
-            <?php
-            $username = $_SESSION['username'];
-            $data = mysqli_query($conn, "SELECT * FROM tbl_admin WHERE username='$username'");
-
-            if ($data) {
-                $a = mysqli_fetch_array($data);
-            } else {
-                die("Query error: " . mysqli_error($conn));
-            }
-            ?>
-
-            <form action="pasien-simpan.php?aksi=simpan" method="POST">
-                <div class="form-group">
-                    <label>Nama Lengkap</label>
-                    <input type="text" name="nama_lengkap" class="form-control" placeholder="Masukkan nama lengkap"
-                        required>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h5 class="m-0">Tambah Data Pasien</h5>
                 </div>
-                <div class="form-group">
-                    <label>Jenis Kelamin</label>
-                    <select name="jenis_kelamin" class="form-control required">
-                        <option selected disabled>Pilih Jenis Kelamin Anda</option>
-                        <option value="Laki-Laki"> Laki-Laki</option>
-                        <option value="perempuan"> Perempuan</option>
-                    </select>
+
+                <div class="card-body">
+                    <form action="pasien-simpan.php?aksi=simpan" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Lengkap</label>
+                            <input type="text" name="nama_lengkap" class="form-control rounded-pill" placeholder="Masukkan nama lengkap" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Jenis Kelamin</label>
+                            <select name="jenis_kelamin" class="form-select rounded-pill" required>
+                                <option selected disabled>Pilih Jenis Kelamin</option>
+                                <option value="Laki-Laki">Laki-Laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Umur</label>
+                            <input type="number" name="umur" class="form-control rounded-pill" placeholder="Masukkan umur" min="1" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control rounded-pill" placeholder="Masukkan Username" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control rounded-pill" placeholder="Masukkan Password" required>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="pasien.php" class="btn btn-secondary rounded-pill px-4">Batal</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">Simpan</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label>Umur</label>
-                    <input type="number" name="umur" class="form-control" placeholder="Masukkan umur" min="1" required>
-                </div>
-                <a href="pasien.php" class="btn btn-secondary mb-2">Batal</a>
-                <input type="submit" value="Simpan" class="btn btn-primary mb-2">
-            </form>
+            </div>
         </div>
     </div>
 </div>

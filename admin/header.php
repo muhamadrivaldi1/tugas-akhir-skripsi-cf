@@ -17,6 +17,9 @@ include '../assets/conn/cek.php';
   <link href="../assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="../assets/css/sb-admin-2.min.css" rel="stylesheet">
   <link href="../assets/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 
 
 </head>
@@ -69,13 +72,6 @@ include '../assets/conn/cek.php';
       <a class="nav-link" href="aturan.php">
         <i class="fas fa-fw fa-cog"></i>
         <span>Aturan</span></a>
-      </li>
-
-      <hr class="sidebar-divider my-0">
-      <li class="nav-item">
-      <a class="nav-link" href="history.php">
-        <i class="fas fa-fw fa-history"></i>
-        <span>history</span></a>
       </li>
 
       <!-- Divider -->

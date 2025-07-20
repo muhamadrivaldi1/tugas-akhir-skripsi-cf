@@ -21,37 +21,47 @@ if (isset($_GET['aksi']) && $_GET['aksi'] === 'ubah') {
 include 'header.php';
 
 // ===================== AMBIL DATA ======================
-$data = mysqli_query($conn, "SELECT * FROM tbl_penyakit WHERE id_penyakit='".$_GET['id_penyakit']."'");
+$data = mysqli_query($conn, "SELECT * FROM tbl_penyakit WHERE id_penyakit='" . $_GET['id_penyakit'] . "'");
 $a    = mysqli_fetch_array($data);
 ?>
 
-<div class="container">
-    <div class="card shadow p-5 mb-5">
-        <div class="card-header">
-            <h5 class="m-0 font-weight-bold text-primary">Ubah Data Penyakit</h5>
-        </div>
-        <div class="card-body">
-            <form action="penyakit-ubah.php?aksi=ubah" method="POST">
-                <input type="hidden" name="id_penyakit" value="<?= $a['id_penyakit'] ?>">
-
-                <div class="form-group">
-                    <label>Nama Penyakit</label>
-                    <input type="text" name="nama_penyakit" class="form-control" value="<?= htmlspecialchars($a['nama_penyakit']) ?>" placeholder="Masukkan Nama Penyakit" required>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h5 class="m-0">Ubah Data Penyakit</h5>
                 </div>
+                <div class="card-body">
+                    <form action="penyakit-ubah.php?aksi=ubah" method="POST">
+                        <input type="hidden" name="id_penyakit" value="<?= $a['id_penyakit'] ?>">
 
-                <div class="form-group">
-                    <label>Keterangan</label>
-                    <textarea name="keterangan" class="form-control" rows="3" placeholder="Deskripsi singkat" required><?= htmlspecialchars($a['keterangan']) ?></textarea>
+                        <div class="mb-3">
+                            <label class="form-label">Nama Penyakit</label>
+                            <input type="text" name="nama_penyakit" class="form-control rounded-pill"
+                                value="<?= htmlspecialchars($a['nama_penyakit']) ?>"
+                                placeholder="Masukkan Nama Penyakit" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Keterangan</label>
+                            <textarea name="keterangan" class="form-control rounded-4" rows="3"
+                                placeholder="Deskripsi singkat" required><?= htmlspecialchars($a['keterangan']) ?></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Solusi / Penanganan</label>
+                            <textarea name="solusi" class="form-control rounded-4" rows="3"
+                                placeholder="Cara penanganan" required><?= htmlspecialchars($a['solusi']) ?></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="penyakit.php" class="btn btn-secondary rounded-pill px-4">Batal</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">Ubah</button>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="form-group">
-                    <label>Solusi / Penanganan</label>
-                    <textarea name="solusi" class="form-control" rows="3" placeholder="Cara penanganan" required><?= htmlspecialchars($a['solusi']) ?></textarea>
-                </div>
-
-                <a href="penyakit.php" class="btn btn-secondary mb-2">Batal</a>
-                <button type="submit" class="btn btn-primary mb-2">Ubah</button>
-            </form>
+            </div>
         </div>
     </div>
 </div>

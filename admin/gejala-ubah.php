@@ -21,43 +21,49 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'ubah') {
 include 'header.php';
 ?>
 
-<div class="container">
-    <div class="card shadow p-5 mb-5">
-        <div class="card-header">
-            <h5 class="m-0 font-weight-bold text-primary">Ubah Data</h5>
-        </div>
-        <hr>
-
-        <?php
-        $id_gejala = $_GET['id_gejala'];
-        $data = mysqli_query($conn, "SELECT * FROM tbl_gejala WHERE id_gejala='$id_gejala'");
-        $a = mysqli_fetch_array($data);
-        ?>
-
-        <div class="card-body">
-            <form action="gejala-ubah.php?aksi=ubah" method="POST">
-                <input type="hidden" name="id_gejala" value="<?= $a['id_gejala'] ?>">
-
-                <div class="form-group">
-                    <label>Nama Gejala</label>
-                    <input type="text" name="nama_gejala" class="form-control"
-                        value="<?= $a['nama_gejala'] ?>" placeholder="Masukkan Nama Gejala" required>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4">
+                    <h5 class="m-0">Ubah Data Gejala</h5>
                 </div>
 
-                <div class="form-group">
-                    <label>Nilai Keyakinan</label>
-                    <select name="nilai_gejala" class="form-control required">
-                        <option value="1">Sangat Yakin (1)</option>
-                        <option value="0.8">Yakin (0.8)</option>
-                        <option value="0.6">Cukup Yakin (0.6)</option>
-                        <option value="0.4">Kuarang Yakin (0.4)</option>
-                        <option value="0.2">Tidak tahu (0.2)</option>
-                        <option value="0.">Tidak (0)</option>
-                    </select>
+                <?php
+                $id_gejala = $_GET['id_gejala'] ?? '';
+                $data = mysqli_query($conn, "SELECT * FROM tbl_gejala WHERE id_gejala='$id_gejala'");
+                $a = mysqli_fetch_array($data);
+                ?>
+
+                <div class="card-body">
+                    <form action="gejala-ubah.php?aksi=ubah" method="POST">
+                        <input type="hidden" name="id_gejala" value="<?= $a['id_gejala'] ?>">
+
+                        <div class="mb-3">
+                            <label class="form-label">Nama Gejala</label>
+                            <input type="text" name="nama_gejala" class="form-control rounded-pill"
+                                value="<?= htmlspecialchars($a['nama_gejala']) ?>" placeholder="Masukkan Nama Gejala" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nilai Keyakinan</label>
+                            <select name="nilai_gejala" class="form-select rounded-pill" required>
+                                <option value="1" <?= $a['nilai_gejala'] == 1 ? 'selected' : '' ?>>Sangat Yakin (1)</option>
+                                <option value="0.8" <?= $a['nilai_gejala'] == 0.8 ? 'selected' : '' ?>>Yakin (0.8)</option>
+                                <option value="0.6" <?= $a['nilai_gejala'] == 0.6 ? 'selected' : '' ?>>Cukup Yakin (0.6)</option>
+                                <option value="0.4" <?= $a['nilai_gejala'] == 0.4 ? 'selected' : '' ?>>Kurang Yakin (0.4)</option>
+                                <option value="0.2" <?= $a['nilai_gejala'] == 0.2 ? 'selected' : '' ?>>Tidak Tahu (0.2)</option>
+                                <option value="0" <?= $a['nilai_gejala'] == 0 ? 'selected' : '' ?>>Tidak (0)</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="gejala.php" class="btn btn-secondary rounded-pill px-4">Batal</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">Ubah</button>
+                        </div>
+                    </form>
                 </div>
-                <a href="gejala.php" class="btn btn-secondary mb-2">Batal</a>
-                <input type="submit" value="Ubah" class="btn btn-primary mb-2">
-            </form>
+            </div>
         </div>
     </div>
 </div>

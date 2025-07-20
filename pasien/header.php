@@ -50,13 +50,6 @@ include '../assets/conn/cek.php';
           <span>Diagnosa</span></a>
       </li>
 
-      <hr class="sidebar-divider my-0">
-      <li class="nav-item">
-        <a class="nav-link" href="history.php">
-          <i class="fas fa-fw fa-history"></i>
-          <span>history</span></a>
-      </li>
-
       <!-- Divider -->
       <hr class="sidebar-divider d-none d-md-block">
 
