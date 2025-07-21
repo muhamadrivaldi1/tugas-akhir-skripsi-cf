@@ -340,7 +340,7 @@ if ($no_regdiagnosa_url) {
                         echo '<div class="alert alert-info">Belum ada hasil diagnosa untuk menampilkan solusi.</div>';
                     }
                     ?>
-                    <!-- <form action="../admin/history.php" method="post" class="mt-3">
+                    <form action="../admin/history.php" method="post" class="mt-3">
                         <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
                         <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
                         <input type="hidden" name="penyakit" value="<?= htmlspecialchars($max_penyakit) ?>">
@@ -349,7 +349,7 @@ if ($no_regdiagnosa_url) {
                         <button type="submit" class="btn btn-success mt-2">
                             <i class="fas fa-save"></i> Simpan ke Riwayat
                         </button>
-                    </form> -->
+                    </form>
 
                 </div>
             </div>
