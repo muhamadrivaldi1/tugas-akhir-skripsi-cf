@@ -15,6 +15,8 @@ include '../assets/conn/cek.php';
   <meta name="author" content="">
 
   <title></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <link href="../assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
   <link href="../assets/css/sb-admin-2.min.css" rel="stylesheet">
   <link href="../assets/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
@@ -48,6 +50,14 @@ include '../assets/conn/cek.php';
         <a class="nav-link" href="diagnosa.php">
           <i class="fas fa-fw fa-stethoscope"></i>
           <span>Diagnosa</span></a>
+      </li>
+
+      <hr class="sidebar-divider my-0">
+      <li class="nav-item">
+        <a class="nav-link" href="aturan.php">
+          <i class="fas fa-fw fa-cogs"></i>
+          <span>Aturan</span>
+        </a>
       </li>
 
       <!-- Divider -->

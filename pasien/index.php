@@ -12,25 +12,36 @@ $Pasien = $data['total'];
 ?>
 
 <div class="container my-5">
-	<div class="card shadow rounded-4 border-0">
-		<div class="card-body text-center p-5">
-			<h4 class="text-primary fw-bold mb-4">✨ Selamat datang di Sistem Diagnosa Penyakit Pencernaan Anak UPTD PUSKESMAS KRESEK ✨</h4>
+	<div class="row justify-content-center">
+		<div class="col-lg-10 col-xl-8">
+			<div class="card shadow-lg border-0 rounded-4">
+				<div class="card-body p-5 text-center">
+					<h4 class="text-primary fw-bold mb-4">
+						✨ Selamat Datang di <br>Sistem Diagnosa Penyakit Pencernaan Anak <br><small class="text-muted">UPTD Puskesmas Kresek</small> ✨
+					</h4>
 
-			<p class="fs-5">Halo <strong><?= htmlspecialchars($aa['nama_lengkap']) ?></strong>! 👋</p>
+					<p class="fs-5 mb-1">Halo, <strong><?= htmlspecialchars($aa['nama_lengkap']) ?></strong> 👋</p>
+					<p class="text-muted mb-4">
+						Terima kasih telah menggunakan sistem ini. Kami hadir untuk membantu mengenali gejala gangguan pencernaan pada anak secara dini dan akurat.
+					</p>
 
-			<p>Sistem ini dirancang untuk membantu orang tua dan tenaga medis dalam mengenali gejala awal gangguan pencernaan pada anak-anak secara cepat dan tepat.</p>
+					<div class="alert alert-info rounded-3 py-3 mb-4">
+						<i class="fas fa-users me-2"></i> Terdapat <strong><?= $Pasien ?> pasien</strong> yang telah terdaftar dalam sistem.
+					</div>
 
-			<p class="mb-4">🩺 Informasi yang diberikan berasal dari basis pengetahuan yang telah disusun oleh para ahli. Gunakan sistem ini sebagai langkah awal sebelum melakukan pemeriksaan langsung ke dokter.</p>
+					<div class="mb-4">
+						<p class="mb-2"><i class="fas fa-stethoscope text-danger me-2"></i>Sistem berbasis pengetahuan ahli medis.</p>
+						<p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Langkah awal sebelum konsultasi dokter.</p>
+						<p><i class="fas fa-shield-alt text-warning me-2"></i>Aman & Mudah digunakan kapan saja.</p>
+					</div>
 
-			<div class="alert alert-info rounded-4 py-3">
-				📋 Saat ini terdapat <strong><?= $Pasien ?> pasien</strong> yang terdaftar dalam sistem kami.
+					<hr class="my-4">
+
+					<p class="text-muted mb-0">
+						<i class="fas fa-user-md me-2"></i> Tim medis kami siap membantu Anda dengan sepenuh hati!
+					</p>
+				</div>
 			</div>
-
-			<hr class="my-4">
-
-			<p class="text-muted">
-				<i class="fas fa-user-md me-2"></i> Kami siap membantu Anda dengan pelayanan terbaik!
-			</p>
 		</div>
 	</div>
 </div>

@@ -1,13 +1,11 @@
 <?php
 include '../assets/conn/config.php';
 
-if (isset($_GET['aksi'])) {
-    if ($_GET['aksi'] == 'hapus') {
-        $id_pasien = $_GET['id_pasien'];
-        mysqli_query($conn, "DELETE FROM tbl_pasien WHERE id_pasien='$id_pasien'");
-        header("location:pasien.php");
-        exit;
-    }
+if (isset($_GET['aksi']) && $_GET['aksi'] == 'hapus') {
+    $id_pasien = $_GET['id_pasien'];
+    mysqli_query($conn, "DELETE FROM tbl_pasien WHERE id_pasien='$id_pasien'");
+    header("location:pasien.php");
+    exit;
 }
 
 include 'header.php';
@@ -23,6 +21,17 @@ include 'header.php';
         </div>
 
         <div class="card-body">
+            <form method="GET" class="mb-3">
+                <div class="input-group w-50">
+                    <span class="input-group-text bg-primary text-white">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" name="search" class="form-control" placeholder="Cari nama pasien..." value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+                    <button class="btn btn-primary" type="submit">Cari</button>
+                    <a href="pasien.php" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+
             <div class="table-responsive">
                 <table class="table table-hover align-middle text-center">
                     <thead class="table-primary">
@@ -38,15 +47,25 @@ include 'header.php';
                     </thead>
                     <tbody>
                         <?php
-                        $data = mysqli_query($conn, "SELECT p.*, a.username, a.password 
-                            FROM tbl_pasien p
-                            LEFT JOIN tbl_admin a ON p.id_admin = a.id_admin
-                            ORDER BY p.id_pasien");
+                        $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
+
+                        $sql = "SELECT p.*, a.username, a.password 
+                                FROM tbl_pasien p
+                                LEFT JOIN tbl_admin a ON p.id_admin = a.id_admin";
+
+                        if (!empty($search)) {
+                            $sql .= " WHERE p.nama_lengkap LIKE '%$search%'";
+                        }
+
+                        $sql .= " ORDER BY p.id_pasien";
+
+                        $data = mysqli_query($conn, $sql);
+
                         if (!$data || mysqli_num_rows($data) === 0) {
-                            echo '<tr><td colspan="7" class="text-center text-danger">Tidak ada data pasien.</td></tr>';
+                            echo '<tr><td colspan="7" class="text-danger text-center">Tidak ada data pasien.</td></tr>';
                         } else {
                             $no = 1;
-                            while ($a = mysqli_fetch_array($data)) {
+                            while ($a = mysqli_fetch_assoc($data)) {
                         ?>
                                 <tr>
                                     <td><?= $no++ ?></td>
@@ -56,17 +75,12 @@ include 'header.php';
                                     <td><?= htmlspecialchars($a['username'] ?? '-') ?></td>
                                     <td><?= htmlspecialchars($a['password'] ?? '-') ?></td>
                                     <td>
-                                        <a href="pasien-ubah.php?id_pasien=<?= $a['id_pasien'] ?>"
-                                            class="btn btn-outline-primary btn-sm rounded-pill d-flex align-items-center gap-2 px-3">
+                                        <a href="pasien-ubah.php?id_pasien=<?= $a['id_pasien'] ?>" class="btn btn-outline-primary btn-sm rounded-pill d-flex align-items-center gap-2 px-3">
                                             <i class="fas fa-edit"></i> <span>Ubah</span>
                                         </a>
-
-                                        <a href="pasien.php?id_pasien=<?= $a['id_pasien'] ?>&aksi=hapus"
-                                            class="btn btn-outline-danger btn-sm rounded-pill d-flex align-items-center gap-2 px-3"
-                                            onclick="return confirm('Yakin ingin menghapus data ini?')">
+                                        <a href="pasien.php?id_pasien=<?= $a['id_pasien'] ?>&aksi=hapus" class="btn btn-outline-danger btn-sm rounded-pill d-flex align-items-center gap-2 px-3" onclick="return confirm('Yakin ingin menghapus data ini?')">
                                             <i class="fas fa-trash-alt"></i> <span>Hapus</span>
                                         </a>
-
                                     </td>
                                 </tr>
                         <?php
@@ -80,6 +94,4 @@ include 'header.php';
     </div>
 </div>
 
-<?php
-include 'footer.php';
-?>
+<?php include 'footer.php'; ?>

@@ -46,11 +46,18 @@ include '../assets/conn/cek.php';
           <span>Dashboard</span></a>
       </li>
 
+      <hr class="sidebar-divider my-0">
+      <li class="nav-item">
+        <a class="nav-link" href="admin.php">
+          <i class="fas fa-fw fa-user"></i>
+          <span>Admin</span></a>
+      </li>
+
       <!-- Divider -->
       <hr class="sidebar-divider my-0">
       <li class="nav-item">
         <a class="nav-link" href="pasien.php">
-          <i class="fas fa-fw fa-user"></i>
+          <i class="fas fa-fw fa-users"></i>
           <span>Pasien</span></a>
       </li>
 
