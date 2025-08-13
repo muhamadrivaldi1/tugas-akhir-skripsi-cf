@@ -346,9 +346,10 @@ if ($no_regdiagnosa_url) {
                     <!-- Form Simpan -->
                     <form id="formSimpanRiwayat" class="mt-3">
                         <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
-                        <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
-                        <input type="hidden" name="penyakit" value="<?= htmlspecialchars($max_penyakit) ?>">
-                        <input type="hidden" name="persentase" value="<?= number_format($max_cf * 100, 2) ?>">
+                        <input type="hidden" name="id_pasien" value="<?= htmlspecialchars($id_pasien ?? '') ?>">
+                        <input type="hidden" name="id_admin" value="<?= htmlspecialchars($id_admin ?? '') ?>">
+                        <input type="hidden" name="penyakit" value="<?= htmlspecialchars($max_penyakit ?? '') ?>">
+                        <input type="hidden" name="persentase" value="<?= number_format(($max_cf ?? 0) * 100, 2) ?>">
                         <button type="submit" id="btnSimpanRiwayat" class="btn btn-success">
                             <i class="fas fa-save me-1"></i> Simpan ke Riwayat
                         </button>

@@ -406,6 +406,10 @@ $d = mysqli_fetch_assoc($data);
                                         <i class="fas fa-heartbeat"></i>
                                         <?= htmlspecialchars($d['penyakit_cf']) ?>
                                     </span>
+
+                                    <span class="text-muted cf-value">
+                                        <?= isset($d['nilai_cf']) ? number_format((float)$d['nilai_cf'], 2) . '%' : '0.00%' ?>
+                                    </span>
                                     <small class="text-muted">Certainty Factor</small>
                                 </div>
                                 <div class="mt-2">

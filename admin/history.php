@@ -2,17 +2,73 @@
 include '../assets/conn/config.php';
 include 'header.php';
 
-// Ambil data riwayat diagnosa
-$query = mysqli_query($conn, "SELECT 
-    h.*,
-    p.nama_lengkap AS nama_pasien,
+// Proses simpan data
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $no_regdiagnosa = mysqli_real_escape_string($conn, $_POST['no_regdiagnosa']);
+    $id_pasien      = mysqli_real_escape_string($conn, $_POST['id_pasien']);
+    $id_admin       = mysqli_real_escape_string($conn, $_POST['id_admin']);
+    $penyakit       = mysqli_real_escape_string($conn, $_POST['penyakit']);
+    $persentase     = mysqli_real_escape_string($conn, $_POST['persentase']);
+    $tanggal        = date('Y-m-d H:i:s');
+
+    $sql_insert = "INSERT INTO tbl_hasil 
+                    (no_regdiagnosa, id_pasien, id_akun, penyakit_cf, nilai_cf, tgl_diagnoas) 
+                   VALUES 
+                    ('$no_regdiagnosa', '$id_pasien', '$id_admin', '$penyakit', '$persentase', '$tanggal')";
+
+    if (!mysqli_query($conn, $sql_insert)) {
+        die("Insert error: " . mysqli_error($conn));
+    }
+}
+
+// Filter pencarian pasien
+$id_pasien = isset($_GET['id_pasien']) ? intval($_GET['id_pasien']) : 0;
+
+// Query riwayat diagnosa (berdasarkan id_pasien jika ada)
+$sql = "SELECT 
+    h.id_hasil,
+    h.id_pasien,
+    h.no_regdiagnosa,
+    h.tgl_diagnoas,
+    h.penyakit_cf,
+    h.nilai_cf,
+    p.nama_lengkap,
     p.jenis_kelamin,
-    p.umur,
-    a.username AS nama_admin
+    p.umur
 FROM tbl_hasil h
-LEFT JOIN tbl_pasien p ON h.id_pasien = p.id_pasien
-LEFT JOIN tbl_admin a ON h.id_akun = a.id_admin
-ORDER BY h.tgl_diagnoas DESC");
+LEFT JOIN tbl_pasien p ON h.id_pasien = p.id_pasien";
+
+if ($id_pasien > 0) {
+    $sql .= " WHERE h.id_pasien = " . intval($id_pasien);
+}
+
+$sql .= " ORDER BY h.tgl_diagnoas DESC";
+
+$query = mysqli_query($conn, $sql) or die("Query error: " . mysqli_error($conn));
+
+// Simpan semua hasil di array untuk statistik
+$hasil = [];
+while ($row = mysqli_fetch_assoc($query)) {
+    $hasil[] = $row;
+}
+
+// Hitung statistik
+$totalDiagnosa = count($hasil);
+$totalPasienUnik = 0;
+
+// Query untuk mendapatkan jumlah pasien unik
+$sql_unique = "SELECT COUNT(DISTINCT id_pasien) as total_unique FROM tbl_hasil";
+if ($id_pasien > 0) {
+    $sql_unique .= " WHERE id_pasien = " . intval($id_pasien);
+}
+$query_unique = mysqli_query($conn, $sql_unique);
+if ($query_unique) {
+    $row_unique = mysqli_fetch_assoc($query_unique);
+    $totalPasienUnik = $row_unique['total_unique'];
+}
+
+// Reset pointer query untuk menampilkan data di tabel
+mysqli_data_seek($query, 0);
 ?>
 
 <style>
@@ -159,6 +215,14 @@ ORDER BY h.tgl_diagnoas DESC");
     .fade-in {
         animation: fadeInUp 0.6s ease-out;
     }
+
+    .cf-percentage {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
 </style>
 
 <div class="container py-5">
@@ -175,12 +239,12 @@ ORDER BY h.tgl_diagnoas DESC");
                 <div class="row">
                     <div class="col-md-4">
                         <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
-                        <h4><?= mysqli_num_rows($query) ?></h4>
+                        <h4><?= $totalDiagnosa ?></h4>
                         <p class="mb-0">Total Diagnosa</p>
                     </div>
                     <div class="col-md-4">
                         <i class="fas fa-users fa-2x text-success mb-2"></i>
-                        <h4><?= mysqli_num_rows(mysqli_query($conn, "SELECT DISTINCT id_pasien FROM tbl_hasil")) ?></h4>
+                        <h4><?= $totalPasienUnik ?></h4>
                         <p class="mb-0">Pasien Unik</p>
                     </div>
                     <div class="col-md-4">
@@ -218,7 +282,7 @@ ORDER BY h.tgl_diagnoas DESC");
             <!-- Main Card -->
             <div class="card card-custom fade-in">
                 <div class="card-body p-0">
-                    <?php if (mysqli_num_rows($query) > 0): ?>
+                    <?php if ($totalDiagnosa > 0): ?>
                         <div class="table-responsive">
                             <table class="table table-modern mb-0" id="historyTable">
                                 <thead>
@@ -230,14 +294,14 @@ ORDER BY h.tgl_diagnoas DESC");
                                         <th>No Registrasi</th>
                                         <th>Tanggal Diagnosa</th>
                                         <th>Diagnosa (CF)</th>
+                                        <th>Nilai CF</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php
                                     $no = 1;
-                                    mysqli_data_seek($query, 0); // Reset pointer
-                                    while ($d = mysqli_fetch_array($query)) {
+                                    foreach ($hasil as $d) {
                                     ?>
                                         <tr>
                                             <td class="text-center fw-bold"><?= $no++ ?></td>
@@ -248,39 +312,50 @@ ORDER BY h.tgl_diagnoas DESC");
                                                         <i class="fas fa-user text-white"></i>
                                                     </div>
                                                     <div>
-                                                        <strong><?= htmlspecialchars($d['nama_pasien']) ?></strong>
+                                                        <strong><?= htmlspecialchars($d['nama_lengkap'] ?? 'Nama tidak tersedia') ?></strong>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($d['jenis_kelamin'] == 'Laki-laki'): ?>
+                                                <?php if (($d['jenis_kelamin'] ?? '') == 'Laki-laki'): ?>
                                                     <span class="badge bg-primary rounded-pill">
                                                         <i class="fas fa-mars me-1"></i><?= htmlspecialchars($d['jenis_kelamin']) ?>
                                                     </span>
-                                                <?php else: ?>
+                                                <?php elseif (($d['jenis_kelamin'] ?? '') == 'Perempuan'): ?>
                                                     <span class="badge bg-danger rounded-pill">
                                                         <i class="fas fa-venus me-1"></i><?= htmlspecialchars($d['jenis_kelamin']) ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary rounded-pill">
+                                                        <i class="fas fa-question me-1"></i>Tidak diketahui
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge bg-info rounded-pill">
-                                                    <?= htmlspecialchars($d['umur']) ?> Tahun
+                                                    <?= htmlspecialchars($d['umur'] ?? '0') ?> Tahun
                                                 </span>
                                             </td>
                                             <td class="text-center">
-                                                <code class="bg-light p-2 rounded"><?= htmlspecialchars($d['no_regdiagnosa']) ?></code>
+                                                <code class="bg-light p-2 rounded"><?= htmlspecialchars($d['no_regdiagnosa'] ?? 'N/A') ?></code>
                                             </td>
                                             <td class="text-center">
                                                 <div>
                                                     <i class="fas fa-calendar-alt text-muted me-1"></i>
-                                                    <?= date('d-m-Y', strtotime($d['tgl_diagnoas'])) ?>
+                                                    <?= $d['tgl_diagnoas'] ? date('d-m-Y', strtotime($d['tgl_diagnoas'])) : 'Tidak tersedia' ?>
                                                 </div>
-                                                <small class="text-muted"><?= date('H:i', strtotime($d['tgl_diagnoas'])) ?></small>
+                                                <small class="text-muted">
+                                                    <?= $d['tgl_diagnoas'] ? date('H:i', strtotime($d['tgl_diagnoas'])) : '' ?>
+                                                </small>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge bg-success rounded-pill fs-6">
-                                                    <?= htmlspecialchars($d['penyakit_cf']) ?>
+                                                    <?= htmlspecialchars($d['penyakit_cf'] ?? 'Tidak diketahui') ?>
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="cf-float">
+                                                    <?= isset($d['nilai_cf']) ? number_format((float)$d['nilai_cf'], 2) .'%': '0.00' ?>
                                                 </span>
                                             </td>
                                             <td class="text-center">
@@ -320,33 +395,71 @@ ORDER BY h.tgl_diagnoas DESC");
 <script>
     // Search functionality
     document.getElementById('searchInput').addEventListener('keyup', function() {
-        const searchTerm = this.value.toLowerCase();
+        const searchTerm = this.value.toLowerCase().trim();
         const tableRows = document.querySelectorAll('#historyTable tbody tr');
 
         tableRows.forEach(row => {
             const rowText = row.textContent.toLowerCase();
-            if (rowText.includes(searchTerm)) {
+            if (searchTerm === '' || rowText.includes(searchTerm)) {
                 row.style.display = '';
                 row.style.animation = 'fadeInUp 0.3s ease-out';
             } else {
                 row.style.display = 'none';
             }
         });
+
+        // Update counter if needed
+        const visibleRows = document.querySelectorAll('#historyTable tbody tr[style=""]').length;
+        console.log(`Showing ${visibleRows} of ${tableRows.length} records`);
     });
 
     // Clear search
     function clearSearch() {
-        document.getElementById('searchInput').value = '';
-        const tableRows = document.querySelectorAll('#historyTable tbody tr');
-        tableRows.forEach(row => {
-            row.style.display = '';
-        });
+        const searchInput = document.getElementById('searchInput');
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('keyup')); // Trigger search to show all rows
     }
 
-    // Export functionality (placeholder)
+    // Export functionality
     function exportData() {
-        alert('Fitur export akan segera tersedia!');
-        // Implement actual export logic here
+        try {
+            const table = document.getElementById('historyTable');
+            const rows = table.querySelectorAll('tbody tr[style=""]'); // Only visible rows
+
+            if (rows.length === 0) {
+                alert('Tidak ada data yang dapat diekspor!');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,Nama Pasien,Jenis Kelamin,Umur,No Registrasi,Tanggal,Diagnosa,Nilai CF\n";
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowData = [
+                    cells[0].textContent.trim(),
+                    cells[1].textContent.trim().replace(/\s+/g, ' '),
+                    cells[2].textContent.trim().replace(/\s+/g, ' '),
+                    cells[3].textContent.trim(),
+                    cells[4].textContent.trim(),
+                    cells[5].textContent.trim().replace(/\s+/g, ' '),
+                    cells[6].textContent.trim(),
+                    cells[7].textContent.trim()
+                ];
+                csvContent += rowData.map(field => `"${field}"`).join(',') + '\n';
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `riwayat_diagnosa_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            alert('Terjadi kesalahan saat mengekspor data!');
+        }
     }
 
     // Add fade in animation to table rows
@@ -359,4 +472,13 @@ ORDER BY h.tgl_diagnoas DESC");
     });
 </script>
 
-<?php include 'footer.php'; ?>
+<?php
+// Cleanup
+if (isset($query)) {
+    mysqli_free_result($query);
+}
+if (isset($query_unique)) {
+    mysqli_free_result($query_unique);
+}
+include 'footer.php';
+?>

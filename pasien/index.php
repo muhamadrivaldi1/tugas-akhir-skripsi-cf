@@ -16,6 +16,7 @@ $Pasien = $data['total'];
 		<div class="col-lg-10 col-xl-8">
 			<div class="card shadow-lg border-0 rounded-4">
 				<div class="card-body p-5 text-center">
+					 <img src="../assets/img/download.webp" alt="Logo UPTD" class="logo-updt img-fluid rounded-circle shadow">
 					<h4 class="text-primary fw-bold mb-4">
 						✨ Selamat Datang di <br>Sistem Diagnosa Penyakit Pencernaan Anak <br><small class="text-muted">UPTD Puskesmas Kresek</small> ✨
 					</h4>

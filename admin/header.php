@@ -31,6 +31,44 @@ include '../assets/conn/cek.php';
 
     <!-- Sidebar -->
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+      <div class="sidebar-logo text-start p-3">
+        <img src="../assets/img/download.webp" alt="Logo UPTD" class="logo-updt img-fluid rounded-circle shadow">
+      </div>
+      <style>
+        /* Logo sidebar default untuk desktop */
+        .logo-updt {
+          width: 60px;
+          /* kecil untuk sidebar kiri */
+          height: 60px;
+          object-fit: cover;
+          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Tablet */
+        @media (max-width: 992px) {
+          .logo-updt {
+            width: 50px;
+            height: 50px;
+          }
+        }
+
+        /* Mobile landscape */
+        @media (max-width: 768px) {
+          .logo-updt {
+            width: 40px;
+            height: 40px;
+          }
+        }
+
+        /* Mobile portrait */
+        @media (max-width: 576px) {
+          .logo-updt {
+            width: 35px;
+            height: 35px;
+          }
+        }
+      </style>
+      
 
       <!-- Sidebar - Brand -->
       <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index">
@@ -50,7 +88,7 @@ include '../assets/conn/cek.php';
       <li class="nav-item">
         <a class="nav-link" href="admin.php">
           <i class="fas fa-fw fa-user"></i>
-          <span>Admin</span></a>
+          <span>Petugas</span></a>
       </li>
 
       <!-- Divider -->
