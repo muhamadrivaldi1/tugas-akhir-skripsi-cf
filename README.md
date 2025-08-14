@@ -1,3 +1,3 @@
-#admin progres 90%
+#admin progres 100%
 
-#pasien progres 95%
+#pasien progres 100%
