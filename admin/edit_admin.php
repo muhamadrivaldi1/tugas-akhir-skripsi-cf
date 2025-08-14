@@ -35,7 +35,7 @@ $a = mysqli_fetch_array($data);
 <div class="container my-4">
     <div class="card shadow-sm rounded-4">
         <div class="card-header bg-primary text-white rounded-top-4">
-            <h5 class="m-0"><i class="fas fa-user-edit me-2"></i>Ubah Data Admin</h5>
+            <h5 class="m-0"><i class="fas fa-user-edit me-2"></i>Ubah Data Petugas</h5>
         </div>
 
         <div class="card-body">

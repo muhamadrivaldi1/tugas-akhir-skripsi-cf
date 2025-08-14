@@ -25,7 +25,7 @@ include 'header.php';
         <div class="col-lg-8">
             <div class="card border-0 shadow-lg rounded-4">
                 <div class="card-header bg-primary text-white rounded-top-4">
-                    <h5 class="m-0"><i class="fas fa-user-plus me-2"></i>Tambah Data Admin</h5>
+                    <h5 class="m-0"><i class="fas fa-user-plus me-2"></i>Tambah Data Petugas</h5>
                 </div>
 
                 <div class="card-body">

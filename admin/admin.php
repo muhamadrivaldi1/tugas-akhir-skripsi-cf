@@ -24,7 +24,7 @@ $data = mysqli_query($conn, $sql);
 <div class="container py-4">
     <div class="card border-0 shadow rounded-4">
         <div class="card-header bg-primary text-white rounded-top-4 d-flex justify-content-between align-items-center">
-            <h5 class="m-0"><i class="fas fa-user me-2"></i>Data Admin</h5>
+            <h5 class="m-0"><i class="fas fa-user me-2"></i>Data Petugas</h5>
             <a href="admin-simpan.php" class="btn btn-light btn-sm rounded-pill">
                 <i class="fas fa-plus me-1"></i> Tambah Data
             </a>
