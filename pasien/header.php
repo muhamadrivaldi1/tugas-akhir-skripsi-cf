@@ -94,7 +94,7 @@ include '../assets/conn/cek.php';
       <hr class="sidebar-divider my-0">
       <li class="nav-item">
         <a class="nav-link" href="aturan.php">
-          <i class="fas fa-fw fa-c"></i>
+          <i class="fas fa-fw fa-cog"></i>
           <span>Aturan</span>
         </a>
       </li>
