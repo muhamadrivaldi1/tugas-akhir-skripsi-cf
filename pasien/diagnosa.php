@@ -1,50 +1,101 @@
 <?php
+session_start();
 date_default_timezone_set('Asia/Jakarta');
 include '../assets/conn/config.php';
 
+// Fungsi generate string acak
 function generateRandomString(int $len = 10): string
 {
     $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     return substr(str_shuffle($chars), 0, $len);
 }
 
-// ============================ HANDLE SUBMIT ==================================
+// ============================ SIMPAN HASIL KE RIWAYAT ========================
+if (($_GET['aksi'] ?? '') === 'simpan') {
+    $no_regdiagnosa = $_POST['no_regdiagnosa'] ?? '';
+    $id_pasien      = (int)($_POST['id_pasien'] ?? 0);
+    $id_admin       = (int)($_POST['id_admin'] ?? 0);
+    $penyakit_cf    = $_POST['penyakit_cf'] ?? '';
+    $nilai_cf       = (float)($_POST['nilai_cf'] ?? 0);
+
+    if (!$no_regdiagnosa || !$id_pasien || !$id_admin) {
+        echo "error: data kosong atau id tidak valid";
+        exit;
+    }
+
+    $stmt = $conn->prepare("
+        INSERT INTO tbl_hasil 
+        (no_regdiagnosa, id_pasien, id_admin, penyakit_cf, nilai_cf, tgl_diagnoas)
+        VALUES (?, ?, ?, ?, ?, NOW())
+    ");
+    if (!$stmt) {
+        echo "error prepare: " . $conn->error;
+        exit;
+    }
+
+    $stmt->bind_param("siisd", $no_regdiagnosa, $id_pasien, $id_admin, $penyakit_cf, $nilai_cf);
+    if ($stmt->execute()) {
+        echo "ok";
+    } else {
+        echo "error execute: " . $stmt->error;
+    }
+    $stmt->close();
+    exit;
+}
+
+// ============================ HANDLE SUBMIT DIAGNOSA =========================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa') {
     $no_regdiagnosa = generateRandomString();
     $tgl_diagnosa   = date('Y-m-d');
     $id_admin       = (int)($_POST['id_admin'] ?? 0);
 
-    $sqlInsert = "INSERT INTO tbl_diagnosa
-                  (no_regdiagnosa, tgl_diagnosa, id_akun, id_gejala, nilai_pasien)
-                  VALUES (?,?,?,?,?)";
-    $stmt = $conn->prepare($sqlInsert) or die('Prepare gagal: ' . $conn->error);
-
-    $stmt->bind_param(
-        'ssiid',
-        $no_regdiagnosa,
-        $tgl_diagnosa,
-        $id_admin,
-        $id_gejala,
-        $nilai_pasien
-    );
-
-    foreach ($_POST['kondisi'] as $idx => $nilai_pasien) {
-        $id_gejala   = (int)$_POST['id_gejala'][$idx];
-        $nilai_pasien = (float)$nilai_pasien;
-        $stmt->execute();
+    // 🔹 cari id_pasien dari tbl_pasien berdasarkan id_admin
+    $id_pasien = 0;
+    $sql_pasien = "SELECT id_pasien FROM tbl_pasien WHERE id_admin = ? LIMIT 1";
+    $stmt_pasien = $conn->prepare($sql_pasien);
+    $stmt_pasien->bind_param("i", $id_admin);
+    $stmt_pasien->execute();
+    $res_pasien = $stmt_pasien->get_result();
+    if ($row_pasien = $res_pasien->fetch_assoc()) {
+        $id_pasien = (int)$row_pasien['id_pasien'];
     }
-    $stmt->close();
-    header("Location: diagnosa.php?no_regdiagnosa=$no_regdiagnosa");
+    $stmt_pasien->close();
+
+    // 🔹 simpan ke tbl_diagnosa
+    if (!empty($_POST['kondisi']) && !empty($_POST['id_gejala'])) {
+        $sqlInsert = "INSERT INTO tbl_diagnosa
+                      (no_regdiagnosa, tgl_diagnosa, id_admin, id_gejala, nilai_pasien)
+                      VALUES (?,?,?,?,?)";
+        $stmt = $conn->prepare($sqlInsert) or die('Prepare gagal: ' . $conn->error);
+        $stmt->bind_param('ssiid', $no_regdiagnosa, $tgl_diagnosa, $id_admin, $id_gejala, $nilai_pasien);
+
+        foreach ($_POST['kondisi'] as $idx => $nilai_pasien) {
+            $id_gejala   = (int)$_POST['id_gejala'][$idx];
+            $nilai_pasien = (float)$nilai_pasien;
+            $stmt->execute();
+        }
+        $stmt->close();
+    }
+
+    // redirect ke halaman diagnosa dengan parameter
+    header("Location: diagnosa.php?no_regdiagnosa=$no_regdiagnosa&id_admin=$id_admin&id_pasien=$id_pasien");
     exit;
 }
 
 // ============================= DATA ADMIN ====================================
 $username  = $_SESSION['username'] ?? '';
 $id_admin  = 0;
+$id_pasien = 0;
 if ($username) {
     $resAdm = $conn->query("SELECT id_admin FROM tbl_admin WHERE username='" . $conn->real_escape_string($username) . "' LIMIT 1");
     if ($rowAdm = $resAdm->fetch_assoc()) {
         $id_admin = (int)$rowAdm['id_admin'];
+
+        // 🔹 ambil id_pasien default
+        $resPas = $conn->query("SELECT id_pasien FROM tbl_pasien WHERE id_admin=" . $id_admin . " LIMIT 1");
+        if ($rowPas = $resPas->fetch_assoc()) {
+            $id_pasien = (int)$rowPas['id_pasien'];
+        }
     }
 }
 
@@ -60,16 +111,19 @@ $data_cf = [];
 $cf_by_penyakit = [];
 $max_cf = 0;
 $max_penyakit = '';
+$id_penyakit_tertinggi = 0;
+
 if ($no_regdiagnosa_url) {
     $sqlHasil = "SELECT p.nama_penyakit,
                         g.nama_gejala,
                         g.nilai_gejala  AS nilai_gejala,
-                        d.nilai_pasien  AS nilai_pasien
+                        d.nilai_pasien  AS nilai_pasien,
+                        p.id_penyakit
                 FROM tbl_diagnosa d
                 JOIN tbl_gejala  g ON g.id_gejala  = d.id_gejala
                 LEFT JOIN tbl_aturan  a ON a.id_gejala  = g.id_gejala
                 LEFT JOIN tbl_penyakit p ON p.id_penyakit = a.id_penyakit
-                WHERE d.id_akun = '$id_admin'
+                WHERE d.id_admin = '$id_admin'
                 AND d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
                 ORDER BY p.id_penyakit";
     $resultDiag = $conn->query($sqlHasil) or die('Query MySQL gagal: ' . mysqli_error($conn));
@@ -82,6 +136,7 @@ if ($no_regdiagnosa_url) {
         $nama_penyakit = $row['nama_penyakit'] ?: '-';
 
         $data_cf[] = [
+            'id_penyakit' => $row['id_penyakit'],
             'nama_penyakit' => $nama_penyakit,
             'nama_gejala' => $row['nama_gejala'],
             'cf_pakar' => $cf_pakar,
@@ -107,11 +162,21 @@ if ($no_regdiagnosa_url) {
             $max_penyakit = $penyakit;
         }
     }
+
+    // 🔹 ambil id_penyakit dari penyakit dengan CF tertinggi
+    if (!empty($max_penyakit)) {
+        $sqlP = "SELECT id_penyakit FROM tbl_penyakit WHERE nama_penyakit = ? LIMIT 1";
+        $stmtP = $conn->prepare($sqlP);
+        $stmtP->bind_param("s", $max_penyakit);
+        $stmtP->execute();
+        $stmtP->bind_result($id_penyakit_tertinggi);
+        $stmtP->fetch();
+        $stmtP->close();
+    }
 }
 ?>
 
 <!-- ============================= HTML ============================= -->
-
 <div class="container">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white">
@@ -123,9 +188,9 @@ if ($no_regdiagnosa_url) {
                     <table class="table table-hover table-bordered align-middle">
                         <thead class="table-primary">
                             <tr class="text-center">
-                                <th style="width: 5%;">No</th>
-                                <th style="width: 65%;">Gejala</th>
-                                <th style="width: 30%;">Pilih Kondisi</th>
+                                <th>No</th>
+                                <th>Gejala</th>
+                                <th>Pilih Kondisi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,32 +253,21 @@ if ($no_regdiagnosa_url) {
                                     <th>Gejala</th>
                                     <th>CF Pakar</th>
                                     <th>CF User</th>
-                                    <th>Nilai CF<br><small>(CF<sub>pakar</sub> x CF<sub>user</sub>)</small></th>
+                                    <th>Nilai CF</th>
                                     <th>Persentase</th>
-                                    <th>Rumus</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php
-                                $no = 1;
-                                foreach ($data_cf as $row):
-                                    $cf_pakar  = $row['cf_pakar'];
-                                    $cf_user   = $row['cf_user'];
-                                    $cf_akhir  = $row['cf_akhir'];
-                                    $persen    = $cf_akhir * 100;
-                                    $nama_penyakit = $row['nama_penyakit'];
-                                ?>
+                                <?php $no = 1;
+                                foreach ($data_cf as $row): ?>
                                     <tr>
                                         <td class="text-center"><?= $no++ ?></td>
-                                        <td><?= htmlspecialchars($nama_penyakit) ?></td>
+                                        <td><?= htmlspecialchars($row['nama_penyakit']) ?></td>
                                         <td><?= htmlspecialchars($row['nama_gejala']) ?></td>
-                                        <td class="text-center"><?= $cf_pakar ?></td>
-                                        <td class="text-center"><?= $cf_user ?></td>
-                                        <td class="text-center fw-semibold text-primary"><?= number_format($cf_akhir, 2) ?></td>
-                                        <td class="text-center text-success fw-bold"><?= number_format($persen, 2) ?>%</td>
-                                        <td class="text-muted small">
-                                            <?= "CF<sub>pakar</sub> × CF<sub>user</sub> = {$cf_pakar} × {$cf_user} = " . number_format($cf_akhir, 2) ?>
-                                        </td>
+                                        <td class="text-center"><?= $row['cf_pakar'] ?></td>
+                                        <td class="text-center"><?= $row['cf_user'] ?></td>
+                                        <td class="text-center fw-semibold text-primary"><?= number_format($row['cf_akhir'], 2) ?></td>
+                                        <td class="text-center text-success fw-bold"><?= number_format($row['cf_akhir'] * 100, 2) ?>%</td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -228,8 +282,6 @@ if ($no_regdiagnosa_url) {
             <span class="text-primary fw-bold">
                 <?= htmlspecialchars($max_penyakit) . " (" . number_format($max_cf * 100, 2) . "%)" ?>
             </span>
-            <br>
-            <small class="text-muted">Semakin tinggi persentase, semakin besar kemungkinan Anda mengalami penyakit tersebut.</small>
         </div>
 
         <div class="card border-0 bg-light p-3 mt-4">
@@ -247,19 +299,17 @@ if ($no_regdiagnosa_url) {
                     echo '<div class="alert alert-warning">Solusi untuk penyakit ini belum tersedia.</div>';
                 }
                 $stmtSolusi->close();
-            } else {
-                echo '<div class="alert alert-info">Belum ada hasil diagnosa untuk menampilkan solusi.</div>';
             }
             ?>
 
-            <!-- Form Simpan -->
-            <form id="formSimpanRiwayat" class="mt-3">
+            <!-- Form Simpan Riwayat -->
+            <form id="formSimpanRiwayat" method="post" class="mt-3">
                 <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
-                <input type="hidden" name="id_pasien" value="<?= htmlspecialchars($id_pasien ?? '') ?>">
-                <input type="hidden" name="id_admin" value="<?= htmlspecialchars($id_admin ?? '') ?>">
-                <input type="hidden" name="penyakit" value="<?= htmlspecialchars($max_penyakit ?? '') ?>">
-                <input type="hidden" name="persentase" value="<?= number_format(($max_cf ?? 0) * 100, 2) ?>">
-                <button type="submit" id="btnSimpanRiwayat" class="btn btn-success">
+                <input type="hidden" name="id_pasien" value="<?= (int)$id_pasien ?>">
+                <input type="hidden" name="id_admin" value="<?= (int)$id_admin ?>">
+                <input type="hidden" name="penyakit_cf" value="<?= htmlspecialchars($max_penyakit) ?>">
+                <input type="hidden" name="nilai_cf" value="<?= round(($max_cf ?? 0) * 100, 2) ?>">
+                <button type="submit" class="btn btn-success">
                     <i class="fas fa-save me-1"></i> Simpan ke Riwayat
                 </button>
             </form>
@@ -270,19 +320,13 @@ if ($no_regdiagnosa_url) {
 <!-- jQuery + Simpan Alert -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('#btnSimpanRiwayat').click(function(e) {
+    $(function() {
+        $('#formSimpanRiwayat').submit(function(e) {
             e.preventDefault();
-            $.ajax({
-                url: '../admin/history.php',
-                type: 'POST',
-                data: $('#formSimpanRiwayat').serialize(),
-                success: function(response) {
-                    alert("✅ Data berhasil disimpan.");
-                },
-                error: function() {
-                    alert("❌ Gagal menyimpan data.");
-                }
+            $.post('../admin/history.php?aksi=simpan', $(this).serialize(), function(res) {
+                alert("✅ Data berhasil disimpan ke Riwayat.");
+            }).fail(function() {
+                alert("❌ Gagal menyimpan data.");
             });
         });
     });

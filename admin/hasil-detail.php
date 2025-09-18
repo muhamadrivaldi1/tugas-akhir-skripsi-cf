@@ -16,7 +16,7 @@ $data = mysqli_query($conn, "SELECT
     a.username AS nama_admin
 FROM tbl_hasil h
 LEFT JOIN tbl_pasien p ON h.id_pasien = p.id_pasien
-LEFT JOIN tbl_admin a ON h.id_akun = a.id_admin
+LEFT JOIN tbl_admin a ON h.id_admin = a.id_admin
 WHERE h.id_hasil = '$id'");
 $d = mysqli_fetch_assoc($data);
 ?>

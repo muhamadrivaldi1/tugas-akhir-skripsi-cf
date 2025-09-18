@@ -2,32 +2,52 @@
 include '../assets/conn/config.php';
 include 'header.php';
 
-// Proses simpan data
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $no_regdiagnosa = mysqli_real_escape_string($conn, $_POST['no_regdiagnosa']);
-    $id_pasien      = mysqli_real_escape_string($conn, $_POST['id_pasien']);
-    $id_admin       = mysqli_real_escape_string($conn, $_POST['id_admin']);
-    $penyakit       = mysqli_real_escape_string($conn, $_POST['penyakit']);
-    $persentase     = mysqli_real_escape_string($conn, $_POST['persentase']);
-    $tanggal        = date('Y-m-d H:i:s');
-
-    $sql_insert = "INSERT INTO tbl_hasil 
-                    (no_regdiagnosa, id_pasien, id_akun, penyakit_cf, nilai_cf, tgl_diagnoas) 
-                   VALUES 
-                    ('$no_regdiagnosa', '$id_pasien', '$id_admin', '$penyakit', '$persentase', '$tanggal')";
-
-    if (!mysqli_query($conn, $sql_insert)) {
-        die("Insert error: " . mysqli_error($conn));
-    }
+// Ambil id_admin (default admin pertama jika ada)
+$sql_admin = "SELECT id_admin FROM tbl_admin LIMIT 1";
+$res_admin = mysqli_query($conn, $sql_admin);
+if ($res_admin && mysqli_num_rows($res_admin) > 0) {
+    $row_admin = mysqli_fetch_assoc($res_admin);
+    $id_admin_default = $row_admin['id_admin'];
+} else {
+    $id_admin_default = 0;
 }
 
-// Filter pencarian pasien
+// Proses simpan data hasil diagnosa ke tbl_hasil
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $no_regdiagnosa = mysqli_real_escape_string($conn, $_POST['no_regdiagnosa']);
+    $id_pasien      = (int) $_POST['id_pasien'];
+    $penyakit       = mysqli_real_escape_string($conn, $_POST['penyakit']);
+    $persentase     = (float) preg_replace('/[^0-9.]/', '', $_POST['persentase']);
+    $tanggal        = date('Y-m-d H:i:s');
+
+    $id_admin = $id_admin_default;
+
+    $sql_insert = "INSERT INTO tbl_hasil 
+                    (no_regdiagnosa, id_pasien, id_admin, penyakit_cf, nilai_cf, tgl_diagnoas) 
+                   VALUES (?,?,?,?,?,?)";
+
+    $stmt = $conn->prepare($sql_insert);
+    if (!$stmt) {
+        die("Prepare failed: " . $conn->error);
+    }
+
+    // string, int, int, string, double, string
+    $stmt->bind_param("siisds", $no_regdiagnosa, $id_pasien, $id_admin, $penyakit, $persentase, $tanggal);
+
+    if (!$stmt->execute()) {
+        die("Insert error: " . $stmt->error);
+    }
+    $stmt->close();
+}
+
+// Filter berdasarkan pasien
 $id_pasien = isset($_GET['id_pasien']) ? intval($_GET['id_pasien']) : 0;
 
-// Query riwayat diagnosa
+// ✅ Perbaiki tgl_diagnoas → tgl_diagnosa
 $sql = "SELECT 
     h.id_hasil,
     h.id_pasien,
+    h.id_admin,
     h.no_regdiagnosa,
     h.tgl_diagnoas,
     h.penyakit_cf,
@@ -50,19 +70,21 @@ while ($row = mysqli_fetch_assoc($query)) {
     $hasil[] = $row;
 }
 
+// Statistik
 $totalDiagnosa = count($hasil);
-$totalPasienUnik = 0;
 
 $sql_unique = "SELECT COUNT(DISTINCT id_pasien) as total_unique FROM tbl_hasil";
 if ($id_pasien > 0) {
     $sql_unique .= " WHERE id_pasien = " . intval($id_pasien);
 }
 $query_unique = mysqli_query($conn, $sql_unique);
+$totalPasienUnik = 0;
 if ($query_unique) {
     $row_unique = mysqli_fetch_assoc($query_unique);
     $totalPasienUnik = $row_unique['total_unique'];
 }
 ?>
+
 
 <div class="container py-5">
     <!-- Title -->
@@ -114,8 +136,8 @@ if ($query_unique) {
                             <i class="fas fa-search text-muted"></i>
                         </span>
                         <input type="text" class="form-control border-0 shadow-sm"
-                               placeholder="Cari nama pasien, no registrasi, diagnosa..."
-                               id="searchInput">
+                            placeholder="Cari nama pasien, no registrasi, diagnosa..."
+                            id="searchInput">
                     </div>
                 </div>
                 <div class="col-md-4 text-end">
@@ -150,38 +172,45 @@ if ($query_unique) {
                             </tr>
                         </thead>
                         <tbody>
-                        <?php $no=1; foreach ($hasil as $d): ?>
-                            <tr>
-                                <td><?= $no++ ?></td>
-                                <td><?= htmlspecialchars($d['nama_lengkap'] ?? '-') ?></td>
-                                <td>
-                                    <?php if ($d['jenis_kelamin']=='Laki-laki'): ?>
-                                        <span class="badge bg-primary">L</span>
-                                    <?php elseif ($d['jenis_kelamin']=='Perempuan'): ?>
-                                        <span class="badge bg-danger">P</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><span class="badge bg-info"><?= $d['umur'] ?? '0' ?> Th</span></td>
-                                <td><code><?= htmlspecialchars($d['no_regdiagnosa']) ?></code></td>
-                                <td>
-                                    <?= date('d-m-Y H:i', strtotime($d['tgl_diagnoas'])) ?>
-                                </td>
-                                <td><span class="badge bg-success"><?= htmlspecialchars($d['penyakit_cf']) ?></span></td>
-                                <td><?= number_format((float)$d['nilai_cf'], 2) ?>%</td>
-                                <td>
-                                    <a href="hasil-detail.php?id=<?= $d['id_hasil'] ?>" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="history-hapus.php?id=<?= $d['id_hasil'] ?>" 
-                                       class="btn btn-sm btn-outline-danger"
-                                       onclick="return confirm('Hapus data ini?')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                            <?php $no = 1;
+                            foreach ($hasil as $d): ?>
+                                <tr>
+                                    <td><?= $no++ ?></td>
+                                    <td><?= htmlspecialchars($d['nama_lengkap'] ?? '-') ?></td>
+                                    <td>
+                                        <?php if ($d['jenis_kelamin'] == 'Laki-Laki'): ?>
+                                            <span class="badge bg-primary">L</span>
+                                        <?php elseif ($d['jenis_kelamin'] == 'Perempuan'): ?>
+                                            <span class="badge bg-danger">P</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><span class="badge bg-info"><?= $d['umur'] ?? '0' ?> Th</span></td>
+                                    <td><code><?= htmlspecialchars($d['no_regdiagnosa']) ?></code></td>
+                                    <td>
+                                        <?= date('d-m-Y H:i', strtotime($d['tgl_diagnoas'])) ?>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($d['penyakit_cf'])): ?>
+                                            <span class="badge bg-success"><?= htmlspecialchars($d['penyakit_cf']) ?></span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= number_format((float)$d['nilai_cf'], 2) ?>%</td>
+                                    <td>
+                                        <a href="hasil-detail.php?id=<?= $d['id_hasil'] ?>" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="history-hapus.php?id=<?= $d['id_hasil'] ?>"
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Hapus data ini?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -227,7 +256,9 @@ if ($query_unique) {
             let row = Array.from(cells).map(td => `"${td.innerText.trim()}"`).join(",");
             csv += row + "\n";
         });
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob([csv], {
+            type: "text/csv;charset=utf-8;"
+        });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = "riwayat_diagnosa.csv";
