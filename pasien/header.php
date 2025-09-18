@@ -1,5 +1,5 @@
 <?php
-
+session_start();
 include '../assets/conn/config.php';
 include '../assets/conn/cek.php';
 ?>
