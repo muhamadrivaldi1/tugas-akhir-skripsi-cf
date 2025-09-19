@@ -1,5 +1,4 @@
 <?php
-session_start();
 date_default_timezone_set('Asia/Jakarta');
 include '../assets/conn/config.php';
 
@@ -18,8 +17,8 @@ if (($_GET['aksi'] ?? '') === 'simpan') {
     $penyakit_cf    = $_POST['penyakit_cf'] ?? '';
     $nilai_cf       = (float)($_POST['nilai_cf'] ?? 0);
 
-    if (!$no_regdiagnosa || !$id_pasien || !$id_admin || !$penyakit_cf) {
-        echo "error: data kosong atau tidak valid";
+    if (!$no_regdiagnosa || !$id_pasien || !$id_admin) {
+        echo "error: data kosong atau id tidak valid";
         exit;
     }
 
@@ -48,33 +47,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa
     $no_regdiagnosa = generateRandomString();
     $tgl_diagnosa   = date('Y-m-d');
     $id_admin       = (int)($_POST['id_admin'] ?? 0);
+    $id_pasien      = (int)($_POST['id_pasien'] ?? 0); // data pasien sudah ada, pakai langsung
 
-    // Ambil id_pasien dari tbl_pasien berdasarkan id_admin
-    $id_pasien = 0;
-    $stmt_pasien = $conn->prepare("SELECT id_pasien FROM tbl_pasien WHERE id_admin=? LIMIT 1");
-    $stmt_pasien->bind_param("i", $id_admin);
-    $stmt_pasien->execute();
-    $res_pasien = $stmt_pasien->get_result();
-    if ($row_pasien = $res_pasien->fetch_assoc()) {
-        $id_pasien = (int)$row_pasien['id_pasien'];
-    }
-    $stmt_pasien->close();
-
-    if ($id_pasien == 0) {
-        die("Error: Pasien tidak ditemukan untuk admin ini.");
+    if (!$id_pasien) {
+        die("Error: pasien belum dipilih!");
     }
 
-    // Simpan ke tbl_diagnosa
+    // simpan ke tbl_diagnosa
     if (!empty($_POST['kondisi']) && !empty($_POST['id_gejala'])) {
-        $sqlInsert = "INSERT INTO tbl_diagnosa (no_regdiagnosa, tgl_diagnosa, id_admin, id_gejala, nilai_pasien)
+        $sqlInsert = "INSERT INTO tbl_diagnosa
+                      (no_regdiagnosa, tgl_diagnosa, id_admin, id_gejala, nilai_pasien)
                       VALUES (?,?,?,?,?)";
         $stmt = $conn->prepare($sqlInsert) or die('Prepare gagal: ' . $conn->error);
         $stmt->bind_param('ssiid', $no_regdiagnosa, $tgl_diagnosa, $id_admin, $id_gejala, $nilai_pasien);
 
-        foreach ($_POST['kondisi'] as $idx => $nilai) {
+        foreach ($_POST['kondisi'] as $idx => $nilai_pasien) {
             $id_gejala    = (int)$_POST['id_gejala'][$idx];
-            $nilai_pasien = (float)$nilai;
-            $stmt->execute();
+            $nilai_pasien = (float)$nilai_pasien;
+            if ($id_gejala) $stmt->execute();
         }
         $stmt->close();
     }
@@ -86,15 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa
 // ============================= DATA ADMIN ====================================
 $username  = $_SESSION['username'] ?? '';
 $id_admin  = 0;
-$id_pasien = 0;
 if ($username) {
     $resAdm = $conn->query("SELECT id_admin FROM tbl_admin WHERE username='" . $conn->real_escape_string($username) . "' LIMIT 1");
     if ($rowAdm = $resAdm->fetch_assoc()) {
         $id_admin = (int)$rowAdm['id_admin'];
-        $resPas = $conn->query("SELECT id_pasien FROM tbl_pasien WHERE id_admin=" . $id_admin . " LIMIT 1");
-        if ($rowPas = $resPas->fetch_assoc()) {
-            $id_pasien = (int)$rowPas['id_pasien'];
-        }
     }
 }
 
@@ -113,46 +98,41 @@ $max_penyakit = '';
 if ($no_regdiagnosa_url) {
     $sqlHasil = "SELECT p.nama_penyakit,
                         g.nama_gejala,
-                        g.nilai_gejala AS nilai_gejala,
-                        d.nilai_pasien AS nilai_pasien,
+                        g.nilai_gejala  AS nilai_gejala,
+                        d.nilai_pasien  AS nilai_pasien,
                         p.id_penyakit
                 FROM tbl_diagnosa d
-                JOIN tbl_gejala g ON g.id_gejala = d.id_gejala
-                LEFT JOIN tbl_aturan a ON a.id_gejala = g.id_gejala
+                JOIN tbl_gejala  g ON g.id_gejala  = d.id_gejala
+                LEFT JOIN tbl_aturan  a ON a.id_gejala  = g.id_gejala
                 LEFT JOIN tbl_penyakit p ON p.id_penyakit = a.id_penyakit
-                WHERE d.id_admin = ? AND d.no_regdiagnosa = ?
+                WHERE d.id_admin = '$id_admin'
+                AND d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
                 ORDER BY p.id_penyakit";
+    $resultDiag = $conn->query($sqlHasil) or die('Query MySQL gagal: ' . mysqli_error($conn));
 
-    $stmt = $conn->prepare($sqlHasil);
-    $stmt->bind_param("is", $id_admin, $no_regdiagnosa_url);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    while ($row = $res->fetch_assoc()) {
-        $cf_pakar = (float)$row['nilai_gejala'];
-        $cf_user  = (float)$row['nilai_pasien'];
-        $cf_akhir = $cf_pakar * $cf_user;
+    while ($row = $resultDiag->fetch_assoc()) {
+        $cf_akhir  = (float)$row['nilai_gejala'] * (float)$row['nilai_pasien'];
         $nama_penyakit = $row['nama_penyakit'] ?: '-';
 
         $data_cf[] = [
             'id_penyakit' => $row['id_penyakit'],
             'nama_penyakit' => $nama_penyakit,
             'nama_gejala' => $row['nama_gejala'],
-            'cf_pakar' => $cf_pakar,
-            'cf_user' => $cf_user,
+            'cf_pakar' => (float)$row['nilai_gejala'],
+            'cf_user' => (float)$row['nilai_pasien'],
             'cf_akhir' => $cf_akhir
         ];
 
         if (!isset($cf_by_penyakit[$nama_penyakit])) $cf_by_penyakit[$nama_penyakit] = [];
-        $cf_by_penyakit[$nama_penyakit][] = $cf_akhir;
+        $cf_by_penyakit[$nama_penyakit][] = ['cf_akhir' => $cf_akhir];
     }
-    $stmt->close();
 
-    // Hitung CF Combine per penyakit
+    // CF Combine
     foreach ($cf_by_penyakit as $penyakit => $list_cf) {
         $cf_combine = 0;
         foreach ($list_cf as $i => $cf) {
-            $cf_combine = $i == 0 ? $cf : $cf_combine + $cf * (1 - $cf_combine);
+            $cf_akhir = $cf['cf_akhir'];
+            $cf_combine = $i == 0 ? $cf_akhir : $cf_combine + $cf_akhir * (1 - $cf_combine);
         }
         if ($cf_combine > $max_cf) {
             $max_cf = $cf_combine;
@@ -162,6 +142,7 @@ if ($no_regdiagnosa_url) {
 }
 ?>
 
+<!-- ============================= HTML ============================= -->
 <div class="container">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white">
@@ -204,6 +185,7 @@ if ($no_regdiagnosa_url) {
                     </table>
                 </div>
                 <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
+                <input type="hidden" name="id_pasien" value="<?= (int)($_GET['id_pasien'] ?? 0) ?>">
                 <div class="d-flex justify-content-between mt-4">
                     <a href="index.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Batal</a>
                     <button type="submit" class="btn btn-success"><i class="fas fa-stethoscope me-1"></i> Proses Diagnosa</button>
@@ -212,82 +194,86 @@ if ($no_regdiagnosa_url) {
         </div>
     </div>
 
-    <?php if ($data_cf && !empty($max_penyakit)): ?>
-        <div class="card shadow-sm border-0 mt-5">
+    <?php if (count($data_cf)): ?>
+        <div class="card shadow-sm border-0 mt-4">
             <div class="card-body">
-                <h5 class="fw-bold text-primary mb-3">Detail Perhitungan Setiap Gejala</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover table-striped align-middle text-center">
-                        <thead class="table-primary">
+                <h5 class="fw-bold text-primary mb-3">Hasil Diagnosa</h5>
+                <table class="table table-bordered table-striped text-center">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>No</th>
+                            <th>Jenis Penyakit</th>
+                            <th>Gejala</th>
+                            <th>CF Pakar</th>
+                            <th>CF User</th>
+                            <th>Nilai CF</th>
+                            <th>Persentase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $no = 1;
+                        foreach ($data_cf as $row): ?>
                             <tr>
-                                <th>No</th>
-                                <th>Jenis Penyakit</th>
-                                <th>Gejala</th>
-                                <th>CF Pakar</th>
-                                <th>CF User</th>
-                                <th>Nilai CF</th>
-                                <th>Persentase</th>
+                                <td><?= $no++ ?></td>
+                                <td><?= htmlspecialchars($row['nama_penyakit']) ?></td>
+                                <td><?= htmlspecialchars($row['nama_gejala']) ?></td>
+                                <td><?= $row['cf_pakar'] ?></td>
+                                <td><?= $row['cf_user'] ?></td>
+                                <td><?= number_format($row['cf_akhir'], 2) ?></td>
+                                <td><?= number_format($row['cf_akhir'] * 100, 2) ?>%</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php $no=1; foreach($data_cf as $row): ?>
-                                <tr>
-                                    <td><?= $no++ ?></td>
-                                    <td><?= htmlspecialchars($row['nama_penyakit']) ?></td>
-                                    <td><?= htmlspecialchars($row['nama_gejala']) ?></td>
-                                    <td><?= $row['cf_pakar'] ?></td>
-                                    <td><?= $row['cf_user'] ?></td>
-                                    <td class="fw-semibold text-primary"><?= number_format($row['cf_akhir'],2) ?></td>
-                                    <td class="text-success fw-bold"><?= number_format($row['cf_akhir']*100,2) ?>%</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
 
                 <div class="alert alert-info mt-3">
                     <strong>Hasil Akhir CF Combine Tertinggi: </strong>
-                    <span class="fw-bold text-primary"><?= htmlspecialchars($max_penyakit) ?> (<?= number_format($max_cf*100,2) ?>%)</span>
+                    <?= htmlspecialchars($max_penyakit) . " (" . number_format($max_cf * 100, 2) . "%)" ?>
                 </div>
 
-                <h5 class="fw-bold text-primary mt-3">Solusi</h5>
-                <?php
-                $solusiText = '';
-                $stmtSol = $conn->prepare("SELECT solusi FROM tbl_penyakit WHERE nama_penyakit=? LIMIT 1");
-                $stmtSol->bind_param('s',$max_penyakit);
-                $stmtSol->execute();
-                $stmtSol->bind_result($solusiText);
-                $stmtSol->fetch();
-                $stmtSol->close();
-                ?>
-                <div class="alert <?= $solusiText ? 'alert-success' : 'alert-warning' ?>">
-                    <?= $solusiText ? nl2br(htmlspecialchars($solusiText)) : "Solusi untuk penyakit ini belum tersedia." ?>
-                </div>
+                <div class="card border-0 bg-light p-3 mt-4">
+                    <h5 class="fw-bold text-primary mb-2"><i class="fas fa-lightbulb me-1"></i> Solusi</h5>
+                    <?php
+                    if (!empty($max_penyakit)) {
+                        $sqlSolusi = "SELECT solusi FROM tbl_penyakit WHERE nama_penyakit = ?";
+                        $stmtSolusi = $conn->prepare($sqlSolusi);
+                        $stmtSolusi->bind_param('s', $max_penyakit);
+                        $stmtSolusi->execute();
+                        $stmtSolusi->bind_result($solusi);
+                        if ($stmtSolusi->fetch() && !empty($solusi)) {
+                            echo '<div class="alert alert-success">' . nl2br(htmlspecialchars($solusi)) . '</div>';
+                        } else {
+                            echo '<div class="alert alert-warning">Solusi untuk penyakit ini belum tersedia.</div>';
+                        }
+                        $stmtSolusi->close();
+                    }
+                    ?>
 
-                <form id="formSimpanRiwayat" method="post">
-                    <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
-                    <input type="hidden" name="id_pasien" value="<?= (int)$id_pasien ?>">
-                    <input type="hidden" name="id_admin" value="<?= (int)$id_admin ?>">
-                    <input type="hidden" name="penyakit_cf" value="<?= htmlspecialchars($max_penyakit) ?>">
-                    <input type="hidden" name="nilai_cf" value="<?= round($max_cf*100,2) ?>">
-                    <button type="submit" class="btn btn-success mt-2"><i class="fas fa-save me-1"></i> Simpan ke Riwayat</button>
-                </form>
+
+                    <!-- Simpan ke Riwayat -->
+                    <form id="formSimpanRiwayat" method="post" class="mt-3">
+                        <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
+                        <input type="hidden" name="id_pasien" value="<?= (int)($_GET['id_pasien'] ?? 0) ?>">
+                        <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
+                        <input type="hidden" name="penyakit_cf" value="<?= htmlspecialchars($max_penyakit) ?>">
+                        <input type="hidden" name="nilai_cf" value="<?= round($max_cf * 100, 2) ?>">
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i> Simpan ke Riwayat</button>
+                    </form>
+                </div>
             </div>
+        <?php endif; ?>
         </div>
-    <?php endif; ?>
-</div>
 
-<!-- jQuery + Simpan Alert -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(function() {
-        $('#formSimpanRiwayat').submit(function(e) {
-            e.preventDefault();
-            $.post('../admin/history.php?aksi=simpan', $(this).serialize(), function(res) {
-                alert("✅ Data berhasil disimpan ke Riwayat.");
-            }).fail(function() {
-                alert("❌ Gagal menyimpan data.");
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $(function() {
+                $('#formSimpanRiwayat').submit(function(e) {
+                    e.preventDefault();
+                    $.post('../admin/history.php?aksi=simpan', $(this).serialize(), function(res) {
+                        alert("✅ Data berhasil disimpan ke Riwayat.");
+                    }).fail(function() {
+                        alert("❌ Gagal menyimpan data.");
+                    });
+                });
             });
-        });
-    });
-</script>
+        </script>
