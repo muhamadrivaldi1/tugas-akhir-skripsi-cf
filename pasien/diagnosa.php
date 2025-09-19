@@ -1,4 +1,5 @@
 <?php
+session_start();
 date_default_timezone_set('Asia/Jakarta');
 include '../assets/conn/config.php';
 
@@ -47,13 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa
     $no_regdiagnosa = generateRandomString();
     $tgl_diagnosa   = date('Y-m-d');
     $id_admin       = (int)($_POST['id_admin'] ?? 0);
-    $id_pasien      = (int)($_POST['id_pasien'] ?? 0); // data pasien sudah ada, pakai langsung
+    $id_pasien      = (int)($_POST['id_pasien'] ?? 0);
 
     if (!$id_pasien) {
         die("Error: pasien belum dipilih!");
     }
 
-    // simpan ke tbl_diagnosa
     if (!empty($_POST['kondisi']) && !empty($_POST['id_gejala'])) {
         $sqlInsert = "INSERT INTO tbl_diagnosa
                       (no_regdiagnosa, tgl_diagnosa, id_admin, id_gejala, nilai_pasien)
@@ -73,13 +73,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa
     exit;
 }
 
-// ============================= DATA ADMIN ====================================
+// ============================= DATA ADMIN DAN PASIEN ====================================
 $username  = $_SESSION['username'] ?? '';
 $id_admin  = 0;
+$id_pasien = 0;
+
+// Ambil id_admin dari yang login
 if ($username) {
     $resAdm = $conn->query("SELECT id_admin FROM tbl_admin WHERE username='" . $conn->real_escape_string($username) . "' LIMIT 1");
     if ($rowAdm = $resAdm->fetch_assoc()) {
         $id_admin = (int)$rowAdm['id_admin'];
+
+        // Ambil id_pasien berdasarkan admin yang login
+        $resPasien = $conn->query("SELECT id_pasien FROM tbl_pasien WHERE id_admin = $id_admin LIMIT 1");
+        if ($rowPasien = $resPasien->fetch_assoc()) {
+            $id_pasien = $rowPasien['id_pasien'];
+        } else {
+            die("Error: Tidak ada pasien terkait dengan akun ini.");
+        }
+    } else {
+        die("Error: Admin tidak ditemukan.");
     }
 }
 
@@ -96,38 +109,35 @@ $max_cf = 0;
 $max_penyakit = '';
 
 if ($no_regdiagnosa_url) {
-    $sqlHasil = "SELECT p.nama_penyakit,
-                        g.nama_gejala,
-                        g.nilai_gejala  AS nilai_gejala,
-                        d.nilai_pasien  AS nilai_pasien,
-                        p.id_penyakit
-                FROM tbl_diagnosa d
-                JOIN tbl_gejala  g ON g.id_gejala  = d.id_gejala
-                LEFT JOIN tbl_aturan  a ON a.id_gejala  = g.id_gejala
-                LEFT JOIN tbl_penyakit p ON p.id_penyakit = a.id_penyakit
-                WHERE d.id_admin = '$id_admin'
-                AND d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
-                ORDER BY p.id_penyakit";
-    $resultDiag = $conn->query($sqlHasil) or die('Query MySQL gagal: ' . mysqli_error($conn));
+    $resPenyakit = $conn->query("SELECT * FROM tbl_penyakit ORDER BY id_penyakit");
+    while ($penyakit = $resPenyakit->fetch_assoc()) {
+        $id_penyakit = $penyakit['id_penyakit'];
+        $nama_penyakit = $penyakit['nama_penyakit'];
 
-    while ($row = $resultDiag->fetch_assoc()) {
-        $cf_akhir  = (float)$row['nilai_gejala'] * (float)$row['nilai_pasien'];
-        $nama_penyakit = $row['nama_penyakit'] ?: '-';
+        $sqlGejala = "SELECT g.nama_gejala, g.nilai_gejala, d.nilai_pasien
+                      FROM tbl_diagnosa d
+                      JOIN tbl_gejala g ON g.id_gejala = d.id_gejala
+                      JOIN tbl_aturan a ON a.id_gejala = g.id_gejala
+                      WHERE d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
+                      AND a.id_penyakit = $id_penyakit";
+        $resGejala = $conn->query($sqlGejala);
 
-        $data_cf[] = [
-            'id_penyakit' => $row['id_penyakit'],
-            'nama_penyakit' => $nama_penyakit,
-            'nama_gejala' => $row['nama_gejala'],
-            'cf_pakar' => (float)$row['nilai_gejala'],
-            'cf_user' => (float)$row['nilai_pasien'],
-            'cf_akhir' => $cf_akhir
-        ];
-
-        if (!isset($cf_by_penyakit[$nama_penyakit])) $cf_by_penyakit[$nama_penyakit] = [];
-        $cf_by_penyakit[$nama_penyakit][] = ['cf_akhir' => $cf_akhir];
+        $cf_by_penyakit[$nama_penyakit] = [];
+        while ($g = $resGejala->fetch_assoc()) {
+            $cf_akhir = $g['nilai_gejala'] * $g['nilai_pasien'];
+            $data_cf[] = [
+                'id_penyakit' => $id_penyakit,
+                'nama_penyakit' => $nama_penyakit,
+                'nama_gejala' => $g['nama_gejala'],
+                'cf_pakar' => (float)$g['nilai_gejala'],
+                'cf_user' => (float)$g['nilai_pasien'],
+                'cf_akhir' => $cf_akhir
+            ];
+            $cf_by_penyakit[$nama_penyakit][] = ['cf_akhir' => $cf_akhir];
+        }
     }
 
-    // CF Combine
+    // Hitung CF Combine
     foreach ($cf_by_penyakit as $penyakit => $list_cf) {
         $cf_combine = 0;
         foreach ($list_cf as $i => $cf) {
@@ -142,7 +152,6 @@ if ($no_regdiagnosa_url) {
 }
 ?>
 
-<!-- ============================= HTML ============================= -->
 <div class="container">
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white">
@@ -150,6 +159,8 @@ if ($no_regdiagnosa_url) {
         </div>
         <div class="card-body">
             <form action="diagnosa.php?aksi=diagnosa" method="post">
+                <!-- Hanya hidden input pasien -->
+                <input type="hidden" name="id_pasien" value="<?= $id_pasien ?>">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered align-middle">
                         <thead class="table-primary">
@@ -185,7 +196,6 @@ if ($no_regdiagnosa_url) {
                     </table>
                 </div>
                 <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
-                <input type="hidden" name="id_pasien" value="<?= (int)($_GET['id_pasien'] ?? 0) ?>">
                 <div class="d-flex justify-content-between mt-4">
                     <a href="index.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i> Batal</a>
                     <button type="submit" class="btn btn-success"><i class="fas fa-stethoscope me-1"></i> Proses Diagnosa</button>
@@ -249,11 +259,9 @@ if ($no_regdiagnosa_url) {
                     }
                     ?>
 
-
-                    <!-- Simpan ke Riwayat -->
                     <form id="formSimpanRiwayat" method="post" class="mt-3">
                         <input type="hidden" name="no_regdiagnosa" value="<?= htmlspecialchars($no_regdiagnosa_url) ?>">
-                        <input type="hidden" name="id_pasien" value="<?= (int)($_GET['id_pasien'] ?? 0) ?>">
+                        <input type="hidden" name="id_pasien" value="<?= $id_pasien ?>">
                         <input type="hidden" name="id_admin" value="<?= $id_admin ?>">
                         <input type="hidden" name="penyakit_cf" value="<?= htmlspecialchars($max_penyakit) ?>">
                         <input type="hidden" name="nilai_cf" value="<?= round($max_cf * 100, 2) ?>">
@@ -261,19 +269,24 @@ if ($no_regdiagnosa_url) {
                     </form>
                 </div>
             </div>
-        <?php endif; ?>
         </div>
+    <?php endif; ?>
+</div>
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script>
-            $(function() {
-                $('#formSimpanRiwayat').submit(function(e) {
-                    e.preventDefault();
-                    $.post('../admin/history.php?aksi=simpan', $(this).serialize(), function(res) {
-                        alert("✅ Data berhasil disimpan ke Riwayat.");
-                    }).fail(function() {
-                        alert("❌ Gagal menyimpan data.");
-                    });
-                });
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(function() {
+        $('#formSimpanRiwayat').submit(function(e) {
+            e.preventDefault();
+            $.post('diagnosa.php?aksi=simpan', $(this).serialize(), function(res) {
+                if (res.trim() === 'ok') {
+                    alert("✅ Data berhasil disimpan ke Riwayat.");
+                } else {
+                    alert("❌ Gagal menyimpan: " + res);
+                }
+            }).fail(function() {
+                alert("❌ Terjadi kesalahan saat menyimpan.");
             });
-        </script>
+        });
+    });
+</script>

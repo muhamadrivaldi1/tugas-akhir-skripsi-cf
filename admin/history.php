@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Jakarta');
 include '../assets/conn/config.php';
 include 'header.php';
 
@@ -16,8 +17,8 @@ if ($res_admin && mysqli_num_rows($res_admin) > 0) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $no_regdiagnosa = mysqli_real_escape_string($conn, $_POST['no_regdiagnosa']);
     $id_pasien      = (int) $_POST['id_pasien'];
-    $penyakit       = mysqli_real_escape_string($conn, $_POST['penyakit_cf']);
-    $persentase     = (float) $_POST['nilai_cf'];
+    $penyakit = mysqli_real_escape_string($conn, $_POST['penyakit_cf']);
+    $persentase = (float) $_POST['nilai_cf'];
     $tanggal        = date('Y-m-d H:i:s');
 
     $id_admin = $id_admin_default;
