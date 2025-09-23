@@ -182,12 +182,14 @@ if ($no_regdiagnosa_url) {
                                     <td>
                                         <select class="form-select" name="kondisi[]">
                                             <option value="0" selected>Pilih Kondisi</option>
+                                            <option value="1">Sangat Yakin (1.0)</option>
                                             <option value="0.8">Yakin (0.8)</option>
                                             <option value="0.6">Cukup Yakin (0.6)</option>
                                             <option value="0.4">Kurang Yakin (0.4)</option>
                                             <option value="0.2">Tidak Yakin (0.2)</option>
                                             <option value="0">Sangat Tidak Yakin (0)</option>
                                         </select>
+
                                     </td>
                                 </tr>
                                 <input type="hidden" name="id_gejala[]" value="<?= $g['id_gejala'] ?>">
