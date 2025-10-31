@@ -115,11 +115,11 @@ if ($no_regdiagnosa_url) {
         $nama_penyakit = $penyakit['nama_penyakit'];
 
         $sqlGejala = "SELECT g.nama_gejala, g.nilai_gejala, d.nilai_pasien
-                      FROM tbl_diagnosa d
-                      JOIN tbl_gejala g ON g.id_gejala = d.id_gejala
-                      JOIN tbl_aturan a ON a.id_gejala = g.id_gejala
-                      WHERE d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
-                      AND a.id_penyakit = $id_penyakit";
+              FROM tbl_diagnosa d
+              JOIN tbl_gejala g ON g.id_gejala = d.id_gejala
+              JOIN tbl_aturan a ON a.id_gejala = g.id_gejala
+              WHERE d.no_regdiagnosa = '" . $conn->real_escape_string($no_regdiagnosa_url) . "'
+              AND a.id_penyakit = $id_penyakit";
         $resGejala = $conn->query($sqlGejala);
 
         $cf_by_penyakit[$nama_penyakit] = [];
