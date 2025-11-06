@@ -59,7 +59,7 @@ include 'header.php';
 
                         <div class="d-flex justify-content-between">
                             <a href="gejala.php" class="btn btn-secondary rounded-pill px-4">Batal</a>
-                            <button type="submit" class="btn btn-primary rounded-pill px-4">Ubah</button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">Simpan</button>
                         </div>
                     </form>
                 </div>

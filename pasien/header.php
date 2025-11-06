@@ -92,15 +92,7 @@ include '../assets/conn/cek.php';
           <i class="fas fa-fw fa-stethoscope"></i>
           <span>Diagnosa</span></a>
       </li>
-
-      <hr class="sidebar-divider my-0">
-      <li class="nav-item">
-        <a class="nav-link" href="aturan.php">
-          <i class="fas fa-fw fa-cog"></i>
-          <span>Aturan</span>
-        </a>
-      </li>
-
+      
       <!-- Divider -->
       <hr class="sidebar-divider d-none d-md-block">
 

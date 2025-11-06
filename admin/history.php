@@ -142,9 +142,6 @@ if ($query_unique) {
                     </div>
                 </div>
                 <div class="col-md-4 text-end">
-                    <button class="btn btn-outline-secondary me-2" onclick="clearSearch()">
-                        <i class="fas fa-undo"></i> Reset
-                    </button>
                     <button class="btn btn-success" onclick="exportData()">
                         <i class="fas fa-download"></i> Export
                     </button>

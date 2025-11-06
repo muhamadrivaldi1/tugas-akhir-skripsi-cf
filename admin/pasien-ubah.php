@@ -92,7 +92,7 @@ $a = mysqli_fetch_array($data);
                     </a>
 
                     <button type="submit" class="btn btn-primary d-flex align-items-center gap-2 px-3 rounded-pill">
-                        <i class="fas fa-save"></i> <span>Ubah</span>
+                        <i class="fas fa-save"></i> <span>Simpan</span>
                     </button>
                 </div>
             </form>
