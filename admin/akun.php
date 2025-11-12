@@ -1,6 +1,5 @@
 <?php
 include '../assets/conn/config.php';
-include 'header.php';
 
 if (isset($_GET['aksi']) && $_GET['aksi'] == 'ubah') {
     $id_admin = $_POST['id_admin'];
@@ -19,6 +18,8 @@ if (isset($_GET['aksi']) && $_GET['aksi'] == 'ubah') {
     header("location:index.php");
     exit;
 }
+
+include 'header.php';
 
 $username = $_SESSION['username'];
 $data = mysqli_query($conn, "SELECT * FROM tbl_admin WHERE username='$username'");
