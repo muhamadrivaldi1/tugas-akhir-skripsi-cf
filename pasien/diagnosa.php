@@ -63,9 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_GET['aksi'] ?? '') === 'diagnosa
 
         foreach ($_POST['kondisi'] as $idx => $nilai_pasien) {
             $id_gejala    = (int)$_POST['id_gejala'][$idx];
-            $nilai_pasien = (float)$nilai_pasien;
-            if ($id_gejala) $stmt->execute();
+            $nilai_pasien = $_POST['kondisi'][$idx];
+
+            // hanya simpan jika user memilih (tidak default "0" pada Pilih Kondisi)
+            if ($nilai_pasien !== "" && $nilai_pasien !== "0") {
+                $nilai_pasien = (float)$nilai_pasien;
+                $stmt->execute();
+            }
         }
+
         $stmt->close();
     }
 
